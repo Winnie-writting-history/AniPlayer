@@ -1,0 +1,1326 @@
+<Window x:Class="AnniPlayer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:AnniPlayer"
+        xmlns:i18n="clr-namespace:AnniPlayer.Services"
+        xmlns:views="clr-namespace:AnniPlayer.Views"
+        mc:Ignorable="d"
+        Title="Ani player"
+        Icon="Assets/app_icon.ico"
+        Width="1280" Height="720"
+        MinWidth="680" MinHeight="420"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        Background="{DynamicResource ThemeWindowBgBrush}"
+        RenderOptions.BitmapScalingMode="LowQuality"
+        RenderOptions.ClearTypeHint="Enabled"
+        InputMethod.IsInputMethodEnabled="False"
+        AllowDrop="True"
+        Drop="Window_Drop"
+        DragOver="Window_DragOver"
+        Loaded="Window_Loaded"
+        Closed="Window_Closed"
+        PreviewKeyDown="Window_PreviewKeyDown"
+        PreviewMouseDown="Window_PreviewMouseDown"
+        MouseMove="Window_MouseMove"
+        PreviewMouseWheel="Window_PreviewMouseWheel"
+        StateChanged="Window_StateChanged">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="0" ResizeBorderThickness="5"
+                      GlassFrameThickness="0" CornerRadius="0"/>
+    </WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- ══ Translucent Custom ToolTip Style ══ -->
+        <Style TargetType="ToolTip">
+            <Setter Property="Background" Value="{DynamicResource ThemeMenuBgBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="HasDropShadow" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToolTip">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                            <Border.Effect>
+                                <DropShadowEffect Color="Black" BlurRadius="12" Opacity="0.6" Direction="270" ShadowDepth="3"/>
+                            </Border.Effect>
+                            <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SmartFillMenuItemStyle" TargetType="MenuItem">
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="32,8,24,8"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Grid x:Name="Grid">
+                            <Border x:Name="Border" Background="{TemplateBinding Background}" CornerRadius="6" Margin="4,2">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="HeaderText" Text="{TemplateBinding Header}" Foreground="{TemplateBinding Foreground}" Margin="{TemplateBinding Padding}" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="CheckMark" Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource ThemeAccentBrush}" 
+                                               VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0,0,0" FontSize="12"
+                                               Visibility="{Binding IsChecked, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BoolToVis}}"/>
+                                    <TextBlock x:Name="RightArrow" Grid.Column="1" Text="&#xE76B;" FontFamily="Segoe MDL2 Assets" 
+                                               Foreground="{DynamicResource ThemeSubTextBrush}" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="10"
+                                               Visibility="Collapsed"/>
+                                </Grid>
+                            </Border>
+
+                            <Popup x:Name="PART_Popup" AllowsTransparency="True" 
+                                   IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                   Placement="Right" HorizontalOffset="-2" VerticalOffset="-2" Focusable="False">
+                                <Grid Background="Transparent">
+                                    <Border Background="{DynamicResource ThemeMenuBgBrush}"
+                                            BorderBrush="{DynamicResource ThemeBorderBrush}" 
+                                            BorderThickness="{DynamicResource ThemeBorderThickness}" CornerRadius="{DynamicResource ThemePanelCornerRadius}" Padding="2">
+                                        <Grid>
+                                            <!-- 磨砂玻璃顶部微光反光弧 (Top Specular Sheen Reflection) -->
+                                            <Border VerticalAlignment="Top" Height="22" CornerRadius="{DynamicResource ThemePanelCornerRadius}"
+                                                    Background="{DynamicResource ThemeMenuSheenBrush}" IsHitTestVisible="False"/>
+                                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="HasItems" Value="True">
+                                <Setter TargetName="RightArrow" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource ThemeButtonHoverBrush}"/>
+                                <Setter TargetName="HeaderText" Property="Foreground" Value="{DynamicResource ThemeButtonHoverFgBrush}"/>
+                                <Setter TargetName="RightArrow" Property="Foreground" Value="{DynamicResource ThemeButtonHoverFgBrush}"/>
+                                <Setter TargetName="CheckMark" Property="Foreground" Value="{DynamicResource ThemeButtonHoverFgBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSubmenuOpen" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource ThemeButtonHoverBrush}"/>
+                                <Setter TargetName="HeaderText" Property="Foreground" Value="{DynamicResource ThemeButtonHoverFgBrush}"/>
+                                <Setter TargetName="RightArrow" Property="Foreground" Value="{DynamicResource ThemeButtonHoverFgBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Border" Property="Opacity" Value="0.35"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SmartFillContextMenuStyle" TargetType="ContextMenu">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="HasDropShadow" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContextMenu">
+                        <Border x:Name="menuBorder"
+                                Background="{DynamicResource ThemeMenuBgBrush}"
+                                BorderBrush="{DynamicResource ThemeBorderBrush}" 
+                                BorderThickness="{DynamicResource ThemeBorderThickness}" 
+                                CornerRadius="{DynamicResource ThemePanelCornerRadius}"
+                                Padding="{TemplateBinding Padding}">
+                            <Grid>
+                                <!-- 磨砂玻璃顶部微光反光弧 (Top Specular Sheen Reflection) -->
+                                <Border VerticalAlignment="Top" Height="22" CornerRadius="{DynamicResource ThemePanelCornerRadius}"
+                                        Background="{DynamicResource ThemeMenuSheenBrush}" IsHitTestVisible="False"/>
+                                <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SmartFillSeparatorStyle" TargetType="Separator">
+            <Setter Property="Background" Value="{DynamicResource ThemeMenuSeparatorBrush}"/>
+            <Setter Property="Margin" Value="10,4"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Separator">
+                        <Border Height="1" Background="{TemplateBinding Background}" SnapsToDevicePixels="True"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="Separator" BasedOn="{StaticResource SmartFillSeparatorStyle}"/>
+
+        <ContextMenu x:Key="VideoContextMenu" Style="{StaticResource SmartFillContextMenuStyle}" Opened="VideoContextMenu_Opened">
+            <MenuItem x:Name="menuCtxSmartFill" Header="{Binding [MenuSmartFill], Source={x:Static i18n:I18nService.Instance}}" Tag="smartfill" Click="BtnSmartFill_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+            <MenuItem x:Name="menuCtxAutoCrop" Header="{Binding [MenuAutoCrop], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource SmartFillMenuItemStyle}">
+                <MenuItem x:Name="menuCtxCropNone" Header="{Binding [CropOff], Source={x:Static i18n:I18nService.Instance}}" Tag="none" Click="AutoCropMenuItem_Click" IsCheckable="True" IsChecked="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuCtxCropPreserve" Header="{Binding [CropPreserve], Source={x:Static i18n:I18nService.Instance}}" Tag="preserve" Click="AutoCropMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuCtxCropAll" Header="{Binding [CropAll], Source={x:Static i18n:I18nService.Instance}}" Tag="crop" Click="AutoCropMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+            </MenuItem>
+            <MenuItem x:Name="menuCtxVideoSharpen" Header="{Binding [MenuVideoSharpen], Source={x:Static i18n:I18nService.Instance}}" Click="MenuVideoSharpen_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+            <MenuItem x:Name="menuAlwaysOnTop" Header="{Binding [MenuAlwaysOnTop], Source={x:Static i18n:I18nService.Instance}}" Click="MenuAlwaysOnTop_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+            <Separator Style="{StaticResource SmartFillSeparatorStyle}"/>
+            <MenuItem x:Name="menuCtxSpeed" Header="{Binding [MenuSpeed], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource SmartFillMenuItemStyle}">
+                <MenuItem x:Name="menuSpeed025" Header="0.25x" Tag="0.25" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuSpeed05" Header="0.5x" Tag="0.5" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuSpeed075" Header="0.75x" Tag="0.75" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuSpeed1" Header="1.0x (Normal)" Tag="1.0" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuSpeed125" Header="1.25x" Tag="1.25" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuSpeed15" Header="1.5x" Tag="1.5" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuSpeed2" Header="2.0x" Tag="2.0" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuSpeed3" Header="3.0x" Tag="3.0" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+            </MenuItem>
+            <MenuItem x:Name="menuAspectRatio" Header="{Binding [AspectRatioHeader], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource SmartFillMenuItemStyle}">
+                <MenuItem x:Name="menuAspectDefault" Header="{Binding [AspectDefault], Source={x:Static i18n:I18nService.Instance}}" Tag="default" Click="AspectRatioMenuItem_Click" IsCheckable="True" IsChecked="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuAspectStretch" Header="{Binding [AspectStretch], Source={x:Static i18n:I18nService.Instance}}" Tag="stretch" Click="AspectRatioMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuAspect4_3" Header="{Binding [Aspect4_3], Source={x:Static i18n:I18nService.Instance}}" Tag="4:3" Click="AspectRatioMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuAspect16_9" Header="{Binding [Aspect16_9], Source={x:Static i18n:I18nService.Instance}}" Tag="16:9" Click="AspectRatioMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuAspect16_10" Header="{Binding [Aspect16_10], Source={x:Static i18n:I18nService.Instance}}" Tag="16:10" Click="AspectRatioMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuAspect235_1" Header="{Binding [Aspect235_1], Source={x:Static i18n:I18nService.Instance}}" Tag="2.35:1" Click="AspectRatioMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+            </MenuItem>
+            <Separator Style="{StaticResource SmartFillSeparatorStyle}"/>
+            <MenuItem x:Name="menuAbLoop" Header="{Binding [MenuAbLoop], Source={x:Static i18n:I18nService.Instance}}" Click="BtnAbLoop_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+            <MenuItem x:Name="menuExportClip" Header="{Binding [MenuExportClip], Source={x:Static i18n:I18nService.Instance}}" Click="MenuExportClip_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+            <MenuItem x:Name="menuExportClipAs" Header="{Binding [MenuExportClipAs], Source={x:Static i18n:I18nService.Instance}}" Click="MenuExportClipAs_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+            <MenuItem x:Name="menuCtxScreenshot" Header="{Binding [MenuScreenshot], Source={x:Static i18n:I18nService.Instance}}" Click="BtnScreenshot_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+            <MenuItem x:Name="menuCtxPip" Header="{Binding [MenuPip], Source={x:Static i18n:I18nService.Instance}}" Click="BtnPip_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+            <Separator Style="{StaticResource SmartFillSeparatorStyle}"/>
+            <MenuItem x:Name="menuCtxOpenFile" Header="{Binding [MenuOpenFile], Source={x:Static i18n:I18nService.Instance}}" Click="MenuOpenFile_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+            <MenuItem x:Name="menuCtxOpenFolder" Header="{Binding [MenuOpenFolder], Source={x:Static i18n:I18nService.Instance}}" Click="MenuOpenFolder_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+            <MenuItem x:Name="menuCtxOpenUrl" Header="{Binding [MenuOpenUrl], Source={x:Static i18n:I18nService.Instance}}" Click="MenuOpenUrl_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+            <MenuItem x:Name="menuCtxSaveStream" Header="{Binding [MenuSaveCurrentStream], Source={x:Static i18n:I18nService.Instance}}" Click="MenuSaveStream_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+            <MenuItem x:Name="menuCtxLibrary" Header="{Binding [MenuLibrary], Source={x:Static i18n:I18nService.Instance}}" Click="BtnLibrary_Click" Style="{StaticResource SmartFillMenuItemStyle}" Visibility="Collapsed"/>
+            <MenuItem x:Name="menuCtxPlaylist" Header="{Binding [MenuPlaylist], Source={x:Static i18n:I18nService.Instance}}" Click="BtnPlaylist_Click" Style="{StaticResource SmartFillMenuItemStyle}" Visibility="Collapsed"/>
+            <Separator Style="{StaticResource SmartFillSeparatorStyle}" Visibility="Collapsed"/>
+            <MenuItem x:Name="menuCtxTheme" Header="{Binding [MenuTheme], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource SmartFillMenuItemStyle}" Visibility="Collapsed">
+                <MenuItem Header="极客电竞青 (Tech Cyan)" Click="ThemeMenuItem_Click" Tag="default" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem Header="湖蓝清澈 (Lake Blue)" Click="ThemeMenuItem_Click" Tag="lakeblue" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem Header="玫瑰金典 (Rose Gold)" Click="ThemeMenuItem_Click" Tag="rosegold" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem Header="香槟金典 (Champagne Gold)" Click="ThemeMenuItem_Click" Tag="champagne" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem Header="银色星钻 (Brushed Silver)" Click="ThemeMenuItem_Click" Tag="silver" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem Header="纯黑 OLED (Pure Black)" Click="ThemeMenuItem_Click" Tag="pureblack" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem Header="翡翠极光 (Emerald Green)" Click="ThemeMenuItem_Click" Tag="emerald" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem Header="紫罗兰夜 (Amethyst Violet)" Click="ThemeMenuItem_Click" Tag="violet" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem Header="翡翠流金 (Teal Gold)" Click="ThemeMenuItem_Click" Tag="teal_gold" Style="{StaticResource SmartFillMenuItemStyle}"/>
+            </MenuItem>
+            <MenuItem x:Name="menuCtxLanguage" Tag="LanguageSubmenu" Header="{Binding [MenuLanguage], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource SmartFillMenuItemStyle}" Visibility="Collapsed">
+            </MenuItem>
+            <Separator Style="{StaticResource SmartFillSeparatorStyle}"/>
+            <MenuItem Header="{Binding [MenuSettings], Source={x:Static i18n:I18nService.Instance}}" Click="MenuSettings_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+        </ContextMenu>
+
+        <!-- ══ Chrome Buttons ═════════════════════════════════════════════ -->
+        <Style x:Key="ChromeBtn" TargetType="Button">
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextBrush}"/>
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="{DynamicResource ThemeButtonHoverBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource ThemeButtonHoverFgBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#1C2942"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CloseBtn" TargetType="Button">
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextBrush}"/>
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#C42B1C"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#9B1E13"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ══ Transport Buttons ══════════════════════════════════════════ -->
+        <Style x:Key="TransportBtn" TargetType="Button">
+            <Setter Property="Width" Value="42"/>
+            <Setter Property="Height" Value="42"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextBrush}"/>
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="24"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" CornerRadius="8"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="{DynamicResource ThemeButtonHoverBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource ThemeButtonHoverFgBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="{DynamicResource ThemeButtonHoverBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PlayBtn" TargetType="Button" BasedOn="{StaticResource TransportBtn}">
+            <Setter Property="Width" Value="50"/>
+            <Setter Property="Height" Value="50"/>
+            <Setter Property="FontSize" Value="28"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" CornerRadius="8"
+                                Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="{DynamicResource ThemeButtonHoverBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="{DynamicResource ThemeButtonHoverBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ══ Timeline Slider ═════════════════════════════════════════════ -->
+        <Style x:Key="TimelineSlider" TargetType="Slider">
+            <Setter Property="Minimum" Value="0"/>
+            <Setter Property="Maximum" Value="100"/>
+            <Setter Property="Value" Value="0"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="IsMoveToPointEnabled" Value="True"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="IsMoveToPointEnabled" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid Height="34" Background="Transparent">
+                            <Border Height="4" CornerRadius="2" Background="{DynamicResource ThemeSliderTrackBrush}"
+                                    VerticalAlignment="Center" Margin="0"/>
+                            <Track x:Name="PART_Track">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="Slider.DecreaseLarge" Focusable="False">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Height="4" Background="{DynamicResource ThemeSliderProgressBrush}" CornerRadius="2,0,0,2"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="Slider.IncreaseLarge" Focusable="False">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Height="4" Background="Transparent"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb>
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Ellipse x:Name="th" Width="14" Height="14"
+                                                         Fill="White" Opacity="0">
+                                                    <Ellipse.Effect>
+                                                        <DropShadowEffect Color="#00E5FF" BlurRadius="8"
+                                                                          ShadowDepth="0" Opacity="0.6"/>
+                                                    </Ellipse.Effect>
+                                                </Ellipse>
+                                                <ControlTemplate.Triggers>
+                                                    <DataTrigger Value="True"
+                                                        Binding="{Binding IsMouseOver,
+                                                            RelativeSource={RelativeSource AncestorType=Slider}}">
+                                                        <Setter TargetName="th" Property="Opacity" Value="1"/>
+                                                    </DataTrigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ══ Vertical Slider ══════════════════════════════════════════════ -->
+        <!-- ══ Vertical Slider ══════════════════════════════════════════════ -->
+        <Style x:Key="VerticalSlider" TargetType="Slider">
+            <Setter Property="Orientation" Value="Vertical"/>
+            <Setter Property="Minimum" Value="0"/>
+            <Setter Property="Maximum" Value="200"/>
+            <Setter Property="Value" Value="80"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="IsMoveToPointEnabled" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid Width="44" Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Stretch">
+                            <Border Width="4" CornerRadius="2" Background="{DynamicResource ThemeSliderTrackBrush}" HorizontalAlignment="Center"/>
+                            <Track x:Name="PART_Track">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="Slider.DecreaseLarge" Focusable="False">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Width="4" Background="{DynamicResource ThemeSliderProgressBrush}" CornerRadius="0,0,2,2"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="Slider.IncreaseLarge" Focusable="False">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Width="4" Background="Transparent"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb>
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Ellipse Width="14" Height="14" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <Ellipse.Effect>
+                                                        <DropShadowEffect Color="Black" BlurRadius="4" Opacity="0.4" Direction="270" ShadowDepth="1"/>
+                                                    </Ellipse.Effect>
+                                                </Ellipse>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ══ Volume Slider ══════════════════════════════════════════════ -->
+        <Style x:Key="VolumeSlider" TargetType="Slider">
+            <Setter Property="Minimum" Value="0"/>
+            <Setter Property="Maximum" Value="200"/>
+            <Setter Property="Value" Value="80"/>
+            <Setter Property="Width" Value="90"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="IsMoveToPointEnabled" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid Height="16">
+                            <Border Height="3" CornerRadius="1.5" Background="{DynamicResource ThemeSliderTrackBrush}" VerticalAlignment="Center"/>
+                            <Track x:Name="PART_Track">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="Slider.DecreaseLarge" Focusable="False">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Height="3" Background="{DynamicResource ThemeSliderProgressBrush}" CornerRadius="1.5,0,0,1.5"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="Slider.IncreaseLarge" Focusable="False">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Height="3" Background="Transparent"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb>
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Ellipse Width="11" Height="11" Fill="White"/>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ══ 3D Frosted Glass Open Button Style for Built-in Themes & Dynamic Skins ══ -->
+        <Style x:Key="OpenBtn" TargetType="Button">
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Padding" Value="16,0"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextBrush}"/>
+            <Setter Property="FontFamily" Value="Microsoft YaHei"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" 
+                                Background="{DynamicResource ThemeOpenBtnBgBrush}"
+                                BorderBrush="{DynamicResource ThemeOpenBtnBorderBrush}"
+                                BorderThickness="{DynamicResource ThemeButtonBorderThickness}"
+                                CornerRadius="{DynamicResource ThemeButtonCornerRadius}"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <Border.Effect>
+                                <DropShadowEffect Color="{DynamicResource ThemeOpenBtnGlowColor}"
+                                                  BlurRadius="8"
+                                                  ShadowDepth="1.5"
+                                                  Direction="270"
+                                                  Opacity="0.45"/>
+                            </Border.Effect>
+                            <Grid>
+                                <!-- 磨砂玻璃顶部微光弧高光反光 (Top Glass Sheen Specular Highlight) -->
+                                <Border x:Name="glassSheen"
+                                        VerticalAlignment="Top"
+                                        Height="15"
+                                        CornerRadius="5,5,1,1"
+                                        Margin="-14,-1,-14,0"
+                                        Background="{DynamicResource ThemeOpenBtnSheenBrush}"
+                                        IsHitTestVisible="False"/>
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="{DynamicResource ThemeOpenBtnHoverBgBrush}"/>
+                                <Setter TargetName="bg" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource ThemeButtonHoverFgBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bg" Property="Opacity" Value="0.75"/>
+                                <Setter TargetName="bg" Property="Margin" Value="0,1,0,-1"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <!-- ════════════════ MAIN OUTER BORDER (1px Gilded Edge in Window Mode) ════════════════ -->
+    <Border x:Name="windowOuterBorder"
+            BorderBrush="{DynamicResource ThemeBorderBrush}"
+            BorderThickness="{DynamicResource ThemeBorderThickness}"
+            Background="{DynamicResource ThemeWindowBgBrush}">
+        <Grid x:Name="mainGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition x:Name="rowTitle" Height="Auto"/> <!-- Title bar row (row 0) -->
+            <RowDefinition x:Name="rowVideo" Height="*"/>    <!-- Video area (row 1) -->
+            <RowDefinition x:Name="rowControls" Height="Auto"/> <!-- Controls row (row 2) -->
+        </Grid.RowDefinitions>
+
+        <!-- ══ ROW 1 · Video Area ════════════════════════════════════════ -->
+        <Grid Grid.Row="1" x:Name="videoGrid" Background="{DynamicResource ThemeWindowBgBrush}"
+              SizeChanged="VideoGrid_SizeChanged"
+              MouseLeftButtonDown="VideoGrid_MouseLeftButtonDown"
+              MouseRightButtonUp="VideoGrid_MouseRightButtonUp"
+              AllowDrop="True" DragOver="VideoGrid_DragOver" Drop="VideoGrid_Drop">
+            <WindowsFormsHost x:Name="videoHost"/>
+        </Grid>
+
+        <!-- Container for Title Bar -->
+        <ContentControl x:Name="ccTitle" Grid.Row="0">
+            <Grid x:Name="titleBar" Height="40" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown" Background="{DynamicResource ThemeTitleBarBrush}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <!-- 💎 Skin Texture Background Layer (UniformToFill with Top alignment) -->
+                <Border Background="{DynamicResource ThemeTitleBarImageBrush}" IsHitTestVisible="False" Grid.ColumnSpan="2"/>
+                <!-- 💎 TitleBar Subtle Glass Gloss Sheen -->
+                <Border Grid.ColumnSpan="2" Height="18" VerticalAlignment="Top" IsHitTestVisible="False">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#22FFFFFF" Offset="0.0"/>
+                            <GradientStop Color="#08FFFFFF" Offset="0.6"/>
+                            <GradientStop Color="#00FFFFFF" Offset="1.0"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                </Border>
+                <!-- 💎 Flare Beam (镜头炫光横向细条光束) -->
+                <Border Height="1.5" VerticalAlignment="Bottom" Background="{DynamicResource ThemeFlareBeamBrush}" IsHitTestVisible="False" Grid.ColumnSpan="2"/>
+                <!-- Left side: ellipse and title text -->
+                <Grid Grid.Column="0" Margin="16,0,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Image Source="pack://application:,,,/Assets/app_icon.png" Width="22" Height="22" Margin="0,0,10,0" VerticalAlignment="Center" Grid.Column="0"/>
+                    <TextBlock x:Name="txtTitle" Text="Ani player" Foreground="{DynamicResource ThemeTextBrush}" FontFamily="Microsoft YaHei" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Grid.Column="1" Margin="0,0,20,0"/>
+                </Grid>
+                <!-- Right side: window control buttons -->
+                <StackPanel Grid.Column="1" HorizontalAlignment="Right" Orientation="Horizontal">
+                    <TextBlock x:Name="txtClock" Text="00:00:00" Foreground="{DynamicResource ThemeTextBrush}" FontFamily="Consolas, Segoe UI, Microsoft YaHei, sans-serif" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                    <Button x:Name="btnMin" Content="&#xE108;" ToolTip="{Binding [TooltipMinimize], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource ChromeBtn}" Click="BtnMin_Click"/>
+                    <Button x:Name="btnMax" Content="&#xE922;" ToolTip="{Binding [TooltipMaximize], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource ChromeBtn}" Click="BtnMax_Click"/>
+                    <Button x:Name="btnClose" Content="&#xE10A;" ToolTip="{Binding [TooltipCloseApp], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource CloseBtn}" Click="BtnClose_Click"/>
+                </StackPanel>
+            </Grid>
+        </ContentControl>
+
+        <!-- Container for Control Bar -->
+        <ContentControl x:Name="ccControls" Grid.Row="2">
+            <Grid x:Name="controlBar" Height="105" Background="{DynamicResource ThemeControlBarBrush}" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <!-- 💎 Skin Texture Background Layer (UniformToFill with Bottom alignment) -->
+                <Border Background="{DynamicResource ThemeControlBarImageBrush}" IsHitTestVisible="False" Grid.RowSpan="2"/>
+                <!-- 💎 ControlBar Subtle Glass Gloss Sheen -->
+                <Border Grid.RowSpan="2" Height="48" VerticalAlignment="Top" IsHitTestVisible="False">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#1FFFFFFF" Offset="0.0"/>
+                            <GradientStop Color="#07FFFFFF" Offset="0.6"/>
+                            <GradientStop Color="#00FFFFFF" Offset="1.0"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                </Border>
+                <!-- 💎 Flare Beam (底部控制栏顶部分割炫光束) -->
+                <Border Height="1.5" VerticalAlignment="Top" Background="{DynamicResource ThemeFlareBeamBrush}" IsHitTestVisible="False" Grid.RowSpan="2"/>
+
+                <Grid Grid.Row="0" Margin="0,-7,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid Grid.Column="0">
+                        <Slider x:Name="sliderTimeline" Style="{StaticResource TimelineSlider}"
+                                Margin="0,0,0,0" PreviewMouseDown="Timeline_PreviewMouseDown"
+                                PreviewMouseUp="Timeline_PreviewMouseUp" ValueChanged="Timeline_ValueChanged"/>
+                        <Canvas x:Name="canvasAbMarkers" IsHitTestVisible="False" VerticalAlignment="Stretch" Margin="0"/>
+                    </Grid>
+                    <Button Grid.Column="1" x:Name="btnPipCloseBar" Content="&#xE10A;" Style="{StaticResource CloseBtn}"
+                            Width="20" Height="20" FontSize="11" Click="BtnClose_Click" ToolTip="{Binding [TooltipCloseApp], Source={x:Static i18n:I18nService.Instance}}"
+                            Visibility="Collapsed" Margin="4,6,8,0"/>
+                </Grid>
+
+                <Grid x:Name="gridControlBarButtons" Grid.Row="1" Margin="12,-4,12,2" VerticalAlignment="Top">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="btnOpen" Content="{Binding [OpenFile], Source={x:Static i18n:I18nService.Instance}}" ToolTip="{Binding [TooltipOpen], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource OpenBtn}" Click="BtnOpen_Click" ContextMenuService.IsEnabled="False" Margin="0,0,16,0">
+                            <Button.ContextMenu>
+                                <ContextMenu Style="{StaticResource SmartFillContextMenuStyle}">
+                                    <MenuItem x:Name="menuBtnOpenFile" Header="{Binding [MenuOpenFile], Source={x:Static i18n:I18nService.Instance}}" Click="MenuOpenFile_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                    <MenuItem x:Name="menuBtnOpenFolder" Header="{Binding [MenuOpenFolder], Source={x:Static i18n:I18nService.Instance}}" Click="MenuOpenFolder_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                    <MenuItem x:Name="menuBtnOpenUrl" Header="{Binding [MenuOpenUrl], Source={x:Static i18n:I18nService.Instance}}" Click="MenuOpenUrl_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
+                        <Button x:Name="btnLibrary" Content="&#xE1D3;" ToolTip="{Binding [TooltipLibrary], Source={x:Static i18n:I18nService.Instance}}" FontFamily="Segoe MDL2 Assets" Style="{StaticResource TransportBtn}" FontSize="20" Click="BtnLibrary_Click" Margin="0,0,10,0"/>
+                        <Button x:Name="btnPrev" Content="&#xE100;" ToolTip="{Binding [TooltipPrev], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" VerticalAlignment="Center" Click="BtnPrev_Click" Margin="0,0,4,0"/>
+                        <Button x:Name="btnPlay" Content="&#xE102;" ToolTip="{Binding [TooltipPlay], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource PlayBtn}" VerticalAlignment="Center" Click="BtnPlay_Click" Margin="2,0"/>
+                        <Button x:Name="btnNext" Content="&#xE101;" ToolTip="{Binding [TooltipNext], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" VerticalAlignment="Center" Click="BtnNext_Click" Margin="2,0,14,0"/>
+                        <TextBlock x:Name="txtTime" Text="--:-- / --:--" Foreground="{DynamicResource ThemeTextBrush}" FontFamily="Consolas, Segoe UI, Microsoft YaHei, sans-serif" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" Margin="4,0"/>
+                    </StackPanel>
+
+                    <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="btnPip" Content="&#xE8A7;" ToolTip="{Binding [TooltipPip], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" Click="BtnPip_Click" Margin="0,0,10,0"/>
+                        <Button x:Name="btnScreenshot" Content="&#xE722;" ToolTip="{Binding [TooltipScreenshot], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" Click="BtnScreenshot_Click" Margin="0,0,10,0"/>
+                        <Button x:Name="btnSpeed" Content="1.0x" ToolTip="{Binding [TooltipSpeed], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" Width="62" Height="42" FontFamily="Consolas, Segoe UI, Microsoft YaHei, sans-serif" Click="BtnSpeed_Click" FontSize="17" FontWeight="Bold" Margin="0,0,10,0">
+                            <Button.ContextMenu>
+                                <ContextMenu Style="{StaticResource SmartFillContextMenuStyle}">
+                                    <MenuItem Header="0.25x" Tag="0.25" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                    <MenuItem Header="0.5x" Tag="0.5" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                    <MenuItem Header="0.75x" Tag="0.75" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                    <MenuItem Header="1.0x (Normal)" Tag="1.0" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                    <MenuItem Header="1.25x" Tag="1.25" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                    <MenuItem Header="1.5x" Tag="1.5" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                    <MenuItem Header="2.0x" Tag="2.0" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                    <MenuItem Header="3.0x" Tag="3.0" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
+                        <Button x:Name="btnToggleTransition" Visibility="Collapsed" Content="&#xE8B1;" ToolTip="转场动画: 关" Foreground="#666666" Style="{StaticResource TransportBtn}" Click="BtnToggleTransition_Click" Margin="0,0,16,0"/>
+                        <Button x:Name="btnSmartFill" Content="&#xE74C;" ToolTip="{Binding [TooltipSmartFill], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" Click="BtnSmartFill_Click" Margin="0,0,10,0"/>
+                        <Button x:Name="btnAutoCrop" Content="&#xE7E6;" ToolTip="{Binding [TooltipAutoCrop], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" Click="BtnAutoCrop_Click" Margin="0,0,10,0">
+                            <Button.ContextMenu>
+                                <ContextMenu Style="{StaticResource SmartFillContextMenuStyle}">
+                                    <MenuItem x:Name="menuCropNone" Header="{Binding [CropOff], Source={x:Static i18n:I18nService.Instance}}" Tag="none" Click="AutoCropMenuItem_Click" IsCheckable="True" IsChecked="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                    <MenuItem x:Name="menuCropPreserve" Header="{Binding [CropPreserve], Source={x:Static i18n:I18nService.Instance}}" Tag="preserve" Click="AutoCropMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                    <MenuItem x:Name="menuCropAll" Header="{Binding [CropAll], Source={x:Static i18n:I18nService.Instance}}" Tag="crop" Click="AutoCropMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
+                        <Button x:Name="btnTracks" ToolTip="{Binding [ToolTipTracks], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" Click="BtnTracks_Click" Margin="0,0,16,0" VerticalAlignment="Center">
+                            <TextBlock Text="&#xE8BD;" Margin="0,2.5,0,0" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        </Button>
+                        <Grid x:Name="panelMuteContainer" Background="Transparent" Margin="0,0,16,0" VerticalAlignment="Center" MouseEnter="Volume_MouseEnter" MouseLeave="Volume_MouseLeave">
+                            <Button x:Name="btnMute" Content="&#xE767;" ToolTip="{Binding [TooltipMute], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" VerticalAlignment="Center" Click="BtnMute_Click"/>
+                            <Popup x:Name="popupVolume" PlacementTarget="{Binding ElementName=btnMute}" Placement="Top" StaysOpen="True" AllowsTransparency="True" VerticalOffset="-4" HorizontalOffset="-1">
+                                <Border Background="{DynamicResource ThemeMenuBgBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="{DynamicResource ThemeBorderThickness}" CornerRadius="{DynamicResource ThemePanelCornerRadius}" Padding="0,10" Width="44" Height="140" MouseEnter="Volume_MouseEnter" MouseLeave="Volume_MouseLeave">
+                                    <Border.Effect>
+                                        <DropShadowEffect Color="Black" BlurRadius="12" Opacity="0.5" Direction="270" ShadowDepth="3"/>
+                                    </Border.Effect>
+                                    <Slider x:Name="sliderVolume" Style="{StaticResource VerticalSlider}" Height="120" Minimum="0" Maximum="200" Value="80" ValueChanged="Volume_ValueChanged" MouseWheel="Volume_MouseWheel"/>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        
+                        <Grid x:Name="panelBrightness" Background="Transparent" Margin="0,0,16,0" MouseEnter="Brightness_MouseEnter" MouseLeave="Brightness_MouseLeave">
+                            <Button x:Name="btnBrightnessReset" Content="&#xE706;" ToolTip="重置亮度" Style="{StaticResource TransportBtn}" Click="BrightnessReset_Click"/>
+                            <Popup x:Name="popupBrightness" PlacementTarget="{Binding ElementName=btnBrightnessReset}" Placement="Top" StaysOpen="True" AllowsTransparency="True" VerticalOffset="-4" HorizontalOffset="-1">
+                                <Border Background="{DynamicResource ThemeMenuBgBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="{DynamicResource ThemeBorderThickness}" CornerRadius="{DynamicResource ThemePanelCornerRadius}" Padding="0,10" Width="44" Height="140" MouseEnter="Brightness_MouseEnter" MouseLeave="Brightness_MouseLeave">
+                                    <Border.Effect>
+                                        <DropShadowEffect Color="Black" BlurRadius="12" Opacity="0.5" Direction="270" ShadowDepth="3"/>
+                                    </Border.Effect>
+                                    <Slider x:Name="sliderBrightness" Style="{StaticResource VerticalSlider}" Height="120" Minimum="-50" Maximum="100" Value="0" SmallChange="5" LargeChange="10" ValueChanged="SliderBrightness_ValueChanged"/>
+                                </Border>
+                            </Popup>
+                        </Grid>
+
+                        <Button x:Name="btnFullscreen" Content="&#xE740;" ToolTip="{Binding [TooltipFullscreen], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" Click="BtnFullscreen_Click" Margin="0,0,4,0"/>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </ContentControl>
+
+        <!-- Fullscreen overlay: top title bar -->
+        <Popup x:Name="popupTop" PlacementTarget="{Binding ElementName=mainGrid}"
+               Placement="Custom"
+               Width="{Binding ActualWidth, ElementName=mainGrid}"
+               AllowsTransparency="True" StaysOpen="True">
+            <Grid x:Name="fsTopBar" Height="40" HorizontalAlignment="Stretch" Width="{Binding ActualWidth, ElementName=mainGrid}" Background="{DynamicResource ThemeTitleBarBrush}">
+                <Grid.RenderTransform>
+                    <TranslateTransform x:Name="transTopBar" Y="-50"/>
+                </Grid.RenderTransform>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <!-- 💎 Skin Texture Background Layer (UniformToFill with Top alignment) -->
+                <Border Background="{DynamicResource ThemeTitleBarImageBrush}" IsHitTestVisible="False" Grid.ColumnSpan="2"/>
+                <!-- 💎 TitleBar Subtle Glass Gloss Sheen -->
+                <Border Grid.ColumnSpan="2" Height="18" VerticalAlignment="Top" IsHitTestVisible="False">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#22FFFFFF" Offset="0.0"/>
+                            <GradientStop Color="#08FFFFFF" Offset="0.6"/>
+                            <GradientStop Color="#00FFFFFF" Offset="1.0"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                </Border>
+                <!-- 💎 Flare Beam (镜头炫光横向细条光束) -->
+                <Border Height="1.5" VerticalAlignment="Bottom" Background="{DynamicResource ThemeFlareBeamBrush}" IsHitTestVisible="False" Grid.ColumnSpan="2"/>
+                <!-- Left side: ellipse and title text -->
+                <Grid Grid.Column="0" Margin="16,0,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Image Source="pack://application:,,,/Assets/app_icon.png" Width="22" Height="22" Margin="0,0,10,0" VerticalAlignment="Center" Grid.Column="0"/>
+                    <TextBlock x:Name="txtTitleFS" Text="Ani player" Foreground="{DynamicResource ThemeTextBrush}" FontFamily="Microsoft YaHei" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Grid.Column="1" Margin="0,0,20,0"/>
+                </Grid>
+                <!-- Right side: window control buttons -->
+                <StackPanel Grid.Column="1" HorizontalAlignment="Right" Orientation="Horizontal">
+                    <TextBlock x:Name="txtClockFS" Text="00:00:00" Foreground="{DynamicResource ThemeTextBrush}" FontFamily="Consolas, Segoe UI, Microsoft YaHei, sans-serif" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                    <Button x:Name="btnMinFS" Content="&#xE108;" ToolTip="{Binding [TooltipMinimize], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource ChromeBtn}" Click="BtnMin_Click"/>
+                    <Button x:Name="btnMaxFS" Content="&#xE922;" ToolTip="{Binding [TooltipMaximize], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource ChromeBtn}" Click="BtnMax_Click"/>
+                    <Button x:Name="btnCloseFS" Content="&#xE10A;" ToolTip="{Binding [TooltipCloseApp], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource CloseBtn}" Click="BtnClose_Click"/>
+                </StackPanel>
+            </Grid>
+        </Popup>
+
+        <!-- Idle Hint Popup Overlay (Slogans on top of Idle Video & Master Texture) -->
+        <Popup x:Name="popupIdleHint" PlacementTarget="{Binding ElementName=videoGrid}"
+               Placement="Center" AllowsTransparency="True" StaysOpen="True" IsHitTestVisible="False"
+               IsOpen="False">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20">
+                <TextBlock x:Name="txtIdleHintTitle" Text="将文件 / 文件夹拖入此处"
+                           HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,10"
+                           FontFamily="Microsoft YaHei, Segoe UI" FontSize="23" FontWeight="Bold"
+                           Foreground="{DynamicResource ThemeTextBrush}">
+                    <TextBlock.Effect>
+                        <DropShadowEffect BlurRadius="8" Color="Black" Opacity="0.7" ShadowDepth="2" Direction="315"/>
+                    </TextBlock.Effect>
+                </TextBlock>
+
+                <TextBlock x:Name="txtIdleHintSub1" Text="打开文件 (Ctrl+O) · 打开文件夹 (Ctrl+Shift+O) · 打开网络流 (Ctrl+U)"
+                           HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,5"
+                           FontFamily="Microsoft YaHei, Segoe UI" FontSize="15"
+                           Foreground="{DynamicResource ThemeSubTextBrush}">
+                    <TextBlock.Effect>
+                        <DropShadowEffect BlurRadius="6" Color="Black" Opacity="0.7" ShadowDepth="1.5" Direction="315"/>
+                    </TextBlock.Effect>
+                </TextBlock>
+
+                <TextBlock x:Name="txtIdleHintSub2" Text="按 Ctrl+V 直接读取剪贴板播放"
+                           HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,0"
+                           FontFamily="Microsoft YaHei, Segoe UI" FontSize="15"
+                           Foreground="{DynamicResource ThemeSubTextBrush}">
+                    <TextBlock.Effect>
+                        <DropShadowEffect BlurRadius="6" Color="Black" Opacity="0.7" ShadowDepth="1.5" Direction="315"/>
+                    </TextBlock.Effect>
+                </TextBlock>
+            </StackPanel>
+        </Popup>
+
+        <!-- 🎵 Unified Floating Audio Banner (Theme-Adaptive Frosted Glass Overlay with Solid Pure Circular Glossy Vinyl & Full Metadata) -->
+        <Popup x:Name="popupAudioBanner" PlacementTarget="{Binding ElementName=videoGrid}"
+               Placement="Center" AllowsTransparency="True" StaysOpen="True" IsHitTestVisible="True"
+               IsOpen="False" Opened="PopupAudioBanner_Opened">
+            <Grid Width="{Binding ElementName=videoGrid, Path=ActualWidth}"
+                  Height="{Binding ElementName=videoGrid, Path=ActualHeight}"
+                  IsHitTestVisible="False">
+                <Border x:Name="borderAudioBanner"
+                        Background="{DynamicResource ThemeAudioBannerBgBrush}" CornerRadius="12"
+                        BorderBrush="{DynamicResource ThemeAudioBannerBorderBrush}" BorderThickness="1.5"
+                        Padding="14,10" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                        Margin="16,0,16,24" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown"
+                        IsHitTestVisible="True">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="22" Color="#000000" Opacity="0.85" ShadowDepth="5"/>
+                    </Border.Effect>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Rotating 100% Solid Opaque Pure Circular Vinyl Disc with Subtle Gloss Sheen (No Transparency) -->
+                        <Viewbox x:Name="viewboxAudioVinyl" Stretch="Uniform" Width="80" Height="80" Margin="0,0,14,0" Grid.Column="0">
+                            <Grid Width="170" Height="170">
+                                <Grid.Effect>
+                                    <DropShadowEffect BlurRadius="18" Color="#000000" Opacity="0.8" ShadowDepth="4"/>
+                                </Grid.Effect>
+                                <Grid x:Name="gridAudioVinylDisc" RenderTransformOrigin="0.5,0.5">
+                                    <Grid.Triggers>
+                                        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                            <BeginStoryboard Name="AudioVinylSpinStory">
+                                                <Storyboard RepeatBehavior="Forever">
+                                                    <DoubleAnimation Storyboard.TargetName="rotAudioVinylDisc"
+                                                                     Storyboard.TargetProperty="Angle"
+                                                                     From="0" To="360"
+                                                                     Duration="0:0:15"/>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger>
+                                    </Grid.Triggers>
+                                    <Grid.RenderTransform>
+                                        <RotateTransform x:Name="rotAudioVinylDisc" Angle="0"/>
+                                    </Grid.RenderTransform>
+
+                                    <!-- 100% Solid Opaque Disc Base (No Transparency Behind Disc) -->
+                                    <Ellipse Width="170" Height="170" Fill="#06080C"/>
+
+                                    <!-- Pure Circular Base with High-Contrast Multi-Stop Radial Vinyl Depth & Theme-Adaptive Outer Edge -->
+                                    <Ellipse Width="170" Height="170" Stroke="{DynamicResource ThemeAudioDiscBorderBrush}" StrokeThickness="1.5">
+                                        <Ellipse.Fill>
+                                            <RadialGradientBrush Center="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
+                                                <GradientStop Color="#4A5670" Offset="0.0"/>
+                                                <GradientStop Color="#141822" Offset="0.18"/>
+                                                <GradientStop Color="#364258" Offset="0.38"/>
+                                                <GradientStop Color="#090C12" Offset="0.58"/>
+                                                <GradientStop Color="#2D384D" Offset="0.78"/>
+                                                <GradientStop Color="#07090E" Offset="0.94"/>
+                                                <GradientStop Color="#222A38" Offset="1.0"/>
+                                            </RadialGradientBrush>
+                                        </Ellipse.Fill>
+                                    </Ellipse>
+
+                                    <!-- Micro-Acoustic Concentric Sound Grooves with High-Contrast Alternating Depths -->
+                                    <Ellipse Width="156" Height="156" Stroke="#35FFFFFF" StrokeThickness="1"/>
+                                    <Ellipse Width="144" Height="144" Stroke="#18FFFFFF" StrokeThickness="0.8"/>
+                                    <Ellipse Width="132" Height="132" Stroke="#30FFFFFF" StrokeThickness="1"/>
+                                    <Ellipse Width="120" Height="120" Stroke="#14FFFFFF" StrokeThickness="0.8"/>
+                                    <Ellipse Width="108" Height="108" Stroke="#2BFFFFFF" StrokeThickness="1"/>
+                                    <Ellipse Width="96" Height="96" Stroke="#14FFFFFF" StrokeThickness="0.8"/>
+                                    <Ellipse Width="84" Height="84" Stroke="#32FFFFFF" StrokeThickness="1"/>
+                                    <Ellipse Width="72" Height="72" Stroke="#18FFFFFF" StrokeThickness="0.8"/>
+
+                                    <!-- 💿 Pure Circular High-Gloss Specular Sheen (Dual-Angle Anisotropic Sweeping Reflections) -->
+                                    <Ellipse Width="170" Height="170" IsHitTestVisible="False">
+                                        <Ellipse.Fill>
+                                            <LinearGradientBrush StartPoint="0.05,0.05" EndPoint="0.95,0.95">
+                                                <GradientStop Color="#60FFFFFF" Offset="0.0"/>
+                                                <GradientStop Color="#00FFFFFF" Offset="0.22"/>
+                                                <GradientStop Color="#28FFFFFF" Offset="0.48"/>
+                                                <GradientStop Color="#00FFFFFF" Offset="0.72"/>
+                                                <GradientStop Color="#55FFFFFF" Offset="1.0"/>
+                                            </LinearGradientBrush>
+                                        </Ellipse.Fill>
+                                    </Ellipse>
+                                    <Ellipse Width="170" Height="170" IsHitTestVisible="False">
+                                        <Ellipse.Fill>
+                                            <LinearGradientBrush StartPoint="0.95,0.05" EndPoint="0.05,0.95">
+                                                <GradientStop Color="#35FFFFFF" Offset="0.0"/>
+                                                <GradientStop Color="#00FFFFFF" Offset="0.30"/>
+                                                <GradientStop Color="#22FFFFFF" Offset="0.50"/>
+                                                <GradientStop Color="#00FFFFFF" Offset="0.70"/>
+                                                <GradientStop Color="#35FFFFFF" Offset="1.0"/>
+                                            </LinearGradientBrush>
+                                        </Ellipse.Fill>
+                                    </Ellipse>
+
+                                    <!-- 100% Solid Opaque Center Label with Theme Accent Radial Gradient -->
+                                    <Ellipse Width="64" Height="64" Stroke="{DynamicResource ThemeAudioAccentBrush}" StrokeThickness="2.0">
+                                        <Ellipse.Fill>
+                                            <RadialGradientBrush Center="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
+                                                <GradientStop Color="#3A527A" Offset="0.0"/>
+                                                <GradientStop Color="#1A2840" Offset="0.65"/>
+                                                <GradientStop Color="#0A1220" Offset="1.0"/>
+                                            </RadialGradientBrush>
+                                        </Ellipse.Fill>
+                                    </Ellipse>
+
+                                    <!-- Center Music Note Symbol -->
+                                    <TextBlock Text="🎵" FontSize="21" Foreground="{DynamicResource ThemeAudioAccentBrush}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.95"/>
+
+                                    <!-- Spindle Hole & Center Silver Ring -->
+                                    <Ellipse Width="14" Height="14" Fill="#05070A" Stroke="{DynamicResource ThemeAudioDiscBorderBrush}" StrokeThickness="1.2"/>
+                                    <Ellipse Width="6" Height="6" Fill="#FFFFFF"/>
+                                </Grid>
+
+                                <!-- Stylus Tonearm -->
+                                <Canvas Width="170" Height="170" IsHitTestVisible="False">
+                                    <!-- Tonearm Pivot Base -->
+                                    <Ellipse Canvas.Left="150" Canvas.Top="4" Width="16" Height="16" Fill="#1E232E" Stroke="{DynamicResource ThemeAudioDiscBorderBrush}" StrokeThickness="1.2"/>
+                                    <Ellipse Canvas.Left="154" Canvas.Top="8" Width="8" Height="8" Fill="{DynamicResource ThemeAudioAccentBrush}"/>
+                                    <!-- Metal Arm -->
+                                    <Path Data="M 158,12 L 150,38 L 120,58" Stroke="#B0C4DE" StrokeThickness="2.2" StrokeLineJoin="Round" StrokeEndLineCap="Round"/>
+                                    <!-- Cartridge & Stylus Head -->
+                                    <Path Data="M 120,58 L 114,64 L 109,61 L 115,55 Z" Fill="{DynamicResource ThemeAudioAccentBrush}"/>
+                                </Canvas>
+                            </Grid>
+                        </Viewbox>
+
+                        <!-- Full Audio Metadata Information (Title, Artist, Album & Lyrics) -->
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <!-- Line 1: Track Title -->
+                            <TextBlock x:Name="txtAudioTrackTitle" Text="Track Title" FontWeight="Bold" FontSize="14"
+                                       Foreground="{DynamicResource ThemeAudioTextBrush}" TextTrimming="CharacterEllipsis" Margin="0,0,0,2">
+                                <TextBlock.Effect>
+                                    <DropShadowEffect BlurRadius="4" Color="#000000" Opacity="0.9" ShadowDepth="1.5" Direction="315"/>
+                                </TextBlock.Effect>
+                            </TextBlock>
+
+                            <!-- Line 2: Artist & Album Information (Full metadata in normal mode) -->
+                            <TextBlock x:Name="txtAudioArtistAlbum" Text="Artist · Album" FontSize="12"
+                                       Foreground="{DynamicResource ThemeAudioSubTextBrush}" TextTrimming="CharacterEllipsis" Margin="0,0,0,3">
+                                <TextBlock.Effect>
+                                    <DropShadowEffect BlurRadius="4" Color="#000000" Opacity="0.9" ShadowDepth="1.5" Direction="315"/>
+                                </TextBlock.Effect>
+                            </TextBlock>
+
+                            <!-- Line 3: Real-time Synchronized Scrolling Lyric -->
+                            <TextBlock x:Name="txtAudioCurrentLyric" Text="🎵 正在播放音乐" FontSize="12.5" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ThemeAudioAccentBrush}" TextTrimming="CharacterEllipsis"
+                                       TextWrapping="NoWrap">
+                                <TextBlock.Effect>
+                                    <DropShadowEffect BlurRadius="4" Color="#000000" Opacity="0.9" ShadowDepth="1.5" Direction="315"/>
+                                </TextBlock.Effect>
+                            </TextBlock>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Popup>
+
+        <!-- OSD Popup (Bottom-Left notification bubble) -->
+        <Popup x:Name="popupOsd" PlacementTarget="{Binding ElementName=mainGrid}"
+               Placement="Bottom" VerticalOffset="-160" HorizontalOffset="30"
+               AllowsTransparency="True" StaysOpen="True" IsHitTestVisible="False">
+            <Border Background="{DynamicResource ThemeDrawerBgBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="16,10">
+                <TextBlock x:Name="txtOsd" Foreground="{DynamicResource ThemeTextBrush}" FontSize="18" FontFamily="Microsoft YaHei" FontWeight="Bold"/>
+            </Border>
+        </Popup>
+
+        <!-- PiP Mode Top Hover Control Bar (Return & Close) -->
+        <Popup x:Name="popupPipClose" PlacementTarget="{Binding ElementName=mainGrid}"
+               Placement="Relative" AllowsTransparency="True" StaysOpen="True" IsOpen="False">
+            <Border Background="#C0000000" CornerRadius="6" Padding="3">
+                <StackPanel Orientation="Horizontal">
+                    <Button x:Name="btnPipReturn" Content="&#xE8A8;" Style="{StaticResource TransportBtn}"
+                            Width="26" Height="26" FontSize="13" Click="BtnPip_Click" ToolTip="{Binding [TooltipPip], Source={x:Static i18n:I18nService.Instance}}" Margin="0,0,4,0"/>
+                    <Button x:Name="btnPipClose" Content="&#xE711;" Style="{StaticResource CloseBtn}"
+                            Width="26" Height="26" FontSize="12" Click="BtnClose_Click" ToolTip="{Binding [TooltipCloseApp], Source={x:Static i18n:I18nService.Instance}}"/>
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- Fullscreen overlay: bottom control bar -->
+        <Popup x:Name="popupBottom" PlacementTarget="{Binding ElementName=mainGrid}"
+               Placement="Custom"
+               Width="{Binding ActualWidth, ElementName=mainGrid}"
+               AllowsTransparency="True" StaysOpen="True">
+            <Grid x:Name="fsBottomBar" Height="118" HorizontalAlignment="Stretch" Width="{Binding ActualWidth, ElementName=mainGrid}" Background="{DynamicResource ThemeControlBarBrush}">
+                 <Grid.RenderTransform>
+                     <TranslateTransform x:Name="transBottomBar" Y="125"/>
+                 </Grid.RenderTransform>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="5"/>
+                <RowDefinition Height="30"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="18"/>
+            </Grid.RowDefinitions>
+            <Border Background="{DynamicResource ThemeControlBarImageBrush}" IsHitTestVisible="False" Grid.RowSpan="4"/>
+            <Border Height="1" VerticalAlignment="Top" Background="{DynamicResource ThemeBorderBrush}" IsHitTestVisible="False" Grid.RowSpan="4"/>
+            <Grid Grid.Row="1" Margin="20,-5,28,0">
+                <Slider x:Name="sliderTimelineFS" Style="{StaticResource TimelineSlider}"
+                        PreviewMouseDown="Timeline_PreviewMouseDown"
+                        PreviewMouseUp="Timeline_PreviewMouseUp" ValueChanged="Timeline_ValueChanged"/>
+                <Canvas x:Name="canvasAbMarkersFS" IsHitTestVisible="False" VerticalAlignment="Stretch" Margin="0"/>
+            </Grid>
+            <Grid Grid.Row="2" Margin="16,0,28,0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="btnOpenFS" Content="{Binding [OpenFile], Source={x:Static i18n:I18nService.Instance}}" ToolTip="{Binding [TooltipOpen], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource OpenBtn}" Click="BtnOpen_Click" ContextMenuService.IsEnabled="False" Margin="0,0,16,0">
+                        <Button.ContextMenu>
+                            <ContextMenu Style="{StaticResource SmartFillContextMenuStyle}">
+                                <MenuItem x:Name="menuBtnOpenFileFS" Header="{Binding [MenuOpenFile], Source={x:Static i18n:I18nService.Instance}}" Click="MenuOpenFile_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                <MenuItem x:Name="menuBtnOpenFolderFS" Header="{Binding [MenuOpenFolder], Source={x:Static i18n:I18nService.Instance}}" Click="MenuOpenFolder_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                <MenuItem x:Name="menuBtnOpenUrlFS" Header="{Binding [MenuOpenUrl], Source={x:Static i18n:I18nService.Instance}}" Click="MenuOpenUrl_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
+                    <Button x:Name="btnLibraryFS" Content="&#xE1D3;" ToolTip="{Binding [TooltipLibrary], Source={x:Static i18n:I18nService.Instance}}" FontFamily="Segoe MDL2 Assets" Style="{StaticResource TransportBtn}" FontSize="20" Click="BtnLibrary_Click" Margin="0,0,10,0"/>
+                    <Button x:Name="btnPrevFS" Content="&#xE100;" ToolTip="{Binding [TooltipPrev], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" Click="BtnPrev_Click" Margin="0,0,4,0"/>
+                    <Button x:Name="btnPlayFS" Content="&#xE102;" ToolTip="{Binding [TooltipPlay], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource PlayBtn}" Click="BtnPlay_Click" Margin="2,0"/>
+                    <Button x:Name="btnNextFS" Content="&#xE101;" ToolTip="{Binding [TooltipNext], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" Click="BtnNext_Click" Margin="2,0,14,0"/>
+                    <TextBlock x:Name="txtTimeFS" Text="--:-- / --:--" Foreground="{DynamicResource ThemeTextBrush}" FontFamily="Consolas, Segoe UI, Microsoft YaHei, sans-serif" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="btnScreenshotFS" Content="&#xE722;" ToolTip="{Binding [TooltipScreenshot], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" Click="BtnScreenshot_Click" Margin="0,0,10,0"/>
+                    <Button x:Name="btnSpeedFS" Content="1.0x" ToolTip="{Binding [TooltipSpeed], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" Width="62" Height="42" FontFamily="Consolas, Segoe UI, Microsoft YaHei, sans-serif" Click="BtnSpeed_Click" FontSize="17" FontWeight="Bold" Margin="0,0,10,0">
+                        <Button.ContextMenu>
+                            <ContextMenu Style="{StaticResource SmartFillContextMenuStyle}">
+                                <MenuItem Header="0.25x" Tag="0.25" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                <MenuItem Header="0.5x" Tag="0.5" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                <MenuItem Header="0.75x" Tag="0.75" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                <MenuItem Header="1.0x (Normal)" Tag="1.0" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                <MenuItem Header="1.25x" Tag="1.25" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                <MenuItem Header="1.5x" Tag="1.5" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                <MenuItem Header="2.0x" Tag="2.0" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                <MenuItem Header="3.0x" Tag="3.0" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
+                    <Button x:Name="btnPipFS" Content="&#xE8A7;" ToolTip="{Binding [TooltipPip], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" Click="BtnPip_Click" Margin="0,0,10,0"/>
+                    <Button x:Name="btnToggleTransitionFS" Visibility="Collapsed" Content="&#xE8B1;" ToolTip="转场动画: 关" Foreground="#666666" Style="{StaticResource TransportBtn}" Click="BtnToggleTransition_Click" Margin="0,0,16,0"/>
+                    <Button x:Name="btnSmartFillFS" Content="&#xE74C;" ToolTip="{Binding [TooltipSmartFill], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" Click="BtnSmartFill_Click" Margin="0,0,10,0"/>
+                    <Button x:Name="btnAutoCropFS" Content="&#xE7E6;" ToolTip="{Binding [TooltipAutoCrop], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" Click="BtnAutoCrop_Click" Margin="0,0,10,0">
+                        <Button.ContextMenu>
+                            <ContextMenu Style="{StaticResource SmartFillContextMenuStyle}">
+                                <MenuItem x:Name="menuCropNoneFS" Header="{Binding [CropOff], Source={x:Static i18n:I18nService.Instance}}" Tag="none" Click="AutoCropMenuItem_Click" IsCheckable="True" IsChecked="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                <MenuItem x:Name="menuCropPreserveFS" Header="{Binding [CropPreserve], Source={x:Static i18n:I18nService.Instance}}" Tag="preserve" Click="AutoCropMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                <MenuItem x:Name="menuCropAllFS" Header="{Binding [CropAll], Source={x:Static i18n:I18nService.Instance}}" Tag="crop" Click="AutoCropMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
+                    <Button x:Name="btnTracksFS" ToolTip="{Binding [ToolTipTracks], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" Click="BtnTracks_Click" Margin="0,0,16,0" VerticalAlignment="Center">
+                        <TextBlock Text="&#xE8BD;" Margin="0,2.5,0,0" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    </Button>
+                    <Grid Background="Transparent" Margin="0,0,16,0" MouseEnter="VolumeFS_MouseEnter" MouseLeave="VolumeFS_MouseLeave">
+                        <Button x:Name="btnMuteFS" Content="&#xE767;" ToolTip="{Binding [TooltipMute], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" Click="BtnMute_Click"/>
+                        <Popup x:Name="popupVolumeFS" PlacementTarget="{Binding ElementName=btnMuteFS}" Placement="Top" StaysOpen="True" AllowsTransparency="True" VerticalOffset="-4" HorizontalOffset="-1">
+                            <Border Background="{DynamicResource ThemeMenuBgBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="{DynamicResource ThemeBorderThickness}" CornerRadius="{DynamicResource ThemePanelCornerRadius}" Padding="0,10" Width="44" Height="140" MouseEnter="VolumeFS_MouseEnter" MouseLeave="VolumeFS_MouseLeave">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="Black" BlurRadius="12" Opacity="0.5" Direction="270" ShadowDepth="3"/>
+                                </Border.Effect>
+                                <Slider x:Name="sliderVolumeFS" Style="{StaticResource VerticalSlider}" Height="120" Minimum="0" Maximum="200" Value="80" ValueChanged="Volume_ValueChanged" MouseWheel="Volume_MouseWheel"/>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    
+                    <Grid x:Name="panelBrightnessFS" Background="Transparent" Margin="0,0,16,0" MouseEnter="BrightnessFS_MouseEnter" MouseLeave="BrightnessFS_MouseLeave">
+                        <Button x:Name="btnBrightnessResetFS" Content="&#xE706;" ToolTip="重置亮度" Style="{StaticResource TransportBtn}" Click="BrightnessReset_Click"/>
+                        <Popup x:Name="popupBrightnessFS" PlacementTarget="{Binding ElementName=btnBrightnessResetFS}" Placement="Top" StaysOpen="True" AllowsTransparency="True" VerticalOffset="-4" HorizontalOffset="-1">
+                            <Border Background="{DynamicResource ThemeMenuBgBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="{DynamicResource ThemeBorderThickness}" CornerRadius="{DynamicResource ThemePanelCornerRadius}" Padding="0,10" Width="44" Height="140" MouseEnter="BrightnessFS_MouseEnter" MouseLeave="BrightnessFS_MouseLeave">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="Black" BlurRadius="12" Opacity="0.5" Direction="270" ShadowDepth="3"/>
+                                </Border.Effect>
+                                <Slider x:Name="sliderBrightnessFS" Style="{StaticResource VerticalSlider}" Height="120" Minimum="-50" Maximum="100" Value="0" SmallChange="5" LargeChange="10" ValueChanged="SliderBrightness_ValueChanged"/>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <Button x:Name="btnFullscreenFS" Content="&#xE73F;" ToolTip="{Binding [TooltipFullscreen], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" Click="BtnFullscreen_Click" Margin="0,0,8,0"/>
+                </StackPanel>
+            </Grid>
+            </Grid>
+        </Popup>
+
+
+
+
+
+        <Popup x:Name="popupSideDrawer" PlacementTarget="{Binding ElementName=mainGrid}"
+               Placement="Right" HorizontalOffset="-450"
+               AllowsTransparency="True" StaysOpen="True" Opened="Popup_Opened">
+            <Grid Width="450" Height="{Binding ElementName=mainGrid, Path=ActualHeight}" ClipToBounds="True">
+                <Border x:Name="sideDrawer" Width="420" HorizontalAlignment="Right" Margin="0,40,-420,120"
+                        Background="{DynamicResource ThemeDrawerBgBrush}"
+                        BorderThickness="{DynamicResource ThemeBorderThickness}" BorderBrush="{DynamicResource ThemeBorderBrush}" CornerRadius="{DynamicResource ThemePanelCornerRadius}">
+                    <Border.Effect>
+                        <DropShadowEffect Color="Black" BlurRadius="20" Opacity="0.5" Direction="270" ShadowDepth="5"/>
+                    </Border.Effect>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="60"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource ThemeBorderBrush}">
+                        <Grid Margin="12,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding [PlaylistHeader], Source={x:Static i18n:I18nService.Instance}}" Foreground="{DynamicResource ThemeTextBrush}" FontSize="15" FontFamily="Microsoft YaHei" FontWeight="Bold"/>
+                                <TextBlock x:Name="txtPlaylistCount" Text="0 个文件" Foreground="{DynamicResource ThemeTextBrush}" Opacity="0.7" FontSize="12" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button x:Name="btnAddFolderPlaylist" Content="&#xE8B7;" ToolTip="{Binding [TooltipAddFolder], Source={x:Static i18n:I18nService.Instance}}" FontFamily="Segoe MDL2 Assets" Style="{StaticResource TransportBtn}" FontSize="14" Click="BtnAddFolderPlaylist_Click" Margin="0,0,4,0"/>
+                                <Button x:Name="btnAddFilePlaylist" Content="&#xE710;" ToolTip="{Binding [TooltipAddFile], Source={x:Static i18n:I18nService.Instance}}" FontFamily="Segoe MDL2 Assets" Style="{StaticResource TransportBtn}" FontSize="14" Click="BtnAddFilePlaylist_Click" Margin="0,0,4,0"/>
+                                <Button x:Name="btnShufflePlaylist" Content="&#xE72A;" ToolTip="{Binding [TooltipShuffle], Source={x:Static i18n:I18nService.Instance}}" FontFamily="Segoe MDL2 Assets" Style="{StaticResource TransportBtn}" FontSize="14" Click="BtnShufflePlaylist_Click" Margin="0,0,4,0"/>
+                                <Button x:Name="btnRepeatMode" Content="&#xE8EE;" ToolTip="{Binding [ToolTipRepeatAll], Source={x:Static i18n:I18nService.Instance}}" FontFamily="Segoe MDL2 Assets" Style="{StaticResource TransportBtn}" FontSize="14" Click="BtnRepeatMode_Click" Margin="0,0,4,0"/>
+                                <Button x:Name="btnSortPlaylist" Content="&#xE8CB;" ToolTip="{Binding [TooltipSort], Source={x:Static i18n:I18nService.Instance}}" FontFamily="Segoe MDL2 Assets" Style="{StaticResource TransportBtn}" FontSize="14" Click="BtnSortPlaylist_Click" Margin="0,0,4,0">
+                                    <Button.ContextMenu>
+                                        <ContextMenu x:Name="menuSort" Style="{StaticResource SmartFillContextMenuStyle}">
+                                            <MenuItem x:Name="menuSortNameAsc"  Header="{Binding [SortNameAsc], Source={x:Static i18n:I18nService.Instance}}" Tag="NameAscending"  Click="SortMenuItem_Click" IsCheckable="True" IsChecked="False" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                            <MenuItem x:Name="menuSortNameDesc" Header="{Binding [SortNameDesc], Source={x:Static i18n:I18nService.Instance}}" Tag="NameDescending" Click="SortMenuItem_Click" IsCheckable="True" IsChecked="False" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                            <MenuItem x:Name="menuSortDateDesc" Header="{Binding [SortDateDesc], Source={x:Static i18n:I18nService.Instance}}" Tag="DateDescending" Click="SortMenuItem_Click" IsCheckable="True" IsChecked="False" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                            <MenuItem x:Name="menuSortDateAsc"  Header="{Binding [SortDateAsc], Source={x:Static i18n:I18nService.Instance}}" Tag="DateAscending"  Click="SortMenuItem_Click" IsCheckable="True" IsChecked="False" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                        </ContextMenu>
+                                    </Button.ContextMenu>
+                                </Button>
+                                <Button x:Name="btnClearPlaylist" Content="&#xE74D;" ToolTip="{Binding [TooltipClearPlaylist], Source={x:Static i18n:I18nService.Instance}}" FontFamily="Segoe MDL2 Assets" Style="{StaticResource TransportBtn}" FontSize="14" Click="BtnClearPlaylist_Click"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    <ListBox x:Name="lbPlaylist" Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="0,2,0,8"
+                             Foreground="#CCCCCC" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             ScrollViewer.CanContentScroll="True"
+                             PreviewMouseWheel="LbPlaylist_PreviewMouseWheel"
+                             PreviewMouseLeftButtonDown="LbPlaylist_PreviewMouseLeftButtonDown"
+                             PreviewMouseMove="LbPlaylist_PreviewMouseMove"
+                             AllowDrop="True" DragOver="LbPlaylist_DragOver" Drop="PlaylistDrawer_Drop"
+                             SelectionChanged="LbPlaylist_SelectionChanged" MouseDoubleClick="LbPlaylist_MouseDoubleClick">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Padding" Value="16,10"/>
+                                <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                <Setter Property="BorderBrush" Value="#20FFFFFF"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                                                <ContentPresenter Margin="{TemplateBinding Padding}"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#20FFFFFF"/>
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter Property="Background" Value="{DynamicResource ThemeSelectedItemBgBrush}"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Background="Transparent">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="&#xE103;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource ThemeAccentBrush}" 
+                                               VerticalAlignment="Center" Margin="0,0,10,0" FontSize="14"
+                                               Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Title}" TextTrimming="CharacterEllipsis" 
+                                               VerticalAlignment="Center" ToolTip="{Binding FilePath}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="{DynamicResource ThemeTextBrush}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsPlaying}" Value="True">
+                                                        <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
+                                                        <Setter Property="FontWeight" Value="Bold"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <Button Grid.Column="2" Content="&#xE711;" FontFamily="Segoe MDL2 Assets" 
+                                            Background="Transparent" BorderThickness="0" FontSize="12" Padding="6,2"
+                                            Cursor="Hand" Click="BtnDeletePlaylistItem_Click"
+                                            x:Name="btnDelete" Visibility="Hidden">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
+                                                <Setter Property="Opacity" Value="0.85"/>
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border Background="Transparent">
+                                                                <TextBlock Text="{TemplateBinding Content}" 
+                                                                           FontFamily="{TemplateBinding FontFamily}" 
+                                                                           FontSize="{TemplateBinding FontSize}" 
+                                                                           Foreground="{TemplateBinding Foreground}" 
+                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource ThemeButtonHoverFgBrush}"/>
+                                                                    <Setter Property="Opacity" Value="1.0"/>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </Grid>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsMouseOver}" Value="True">
+                                        <Setter TargetName="btnDelete" Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+        </Grid>
+        </Popup>
+
+        <!-- Playlist Overlay Popup (Modal) -->
+        <Popup x:Name="popupLibrary" PlacementTarget="{Binding ElementName=mainGrid}"
+               Placement="Center" AllowsTransparency="True" StaysOpen="True" Opened="Popup_Opened">
+            <Grid x:Name="gridLibraryHost" 
+                  Width="{Binding ElementName=mainGrid, Path=ActualWidth}"
+                  Height="{Binding ElementName=mainGrid, Path=ActualHeight}">
+                <views:PlaylistOverlay x:Name="overlayLibrary"/>
+            </Grid>
+        </Popup>
+
+        <!-- Subtitle & Audio Tracks Overlay Popup -->
+        <Popup x:Name="popupTracks" PlacementTarget="{Binding ElementName=btnTracks}" Placement="Top" StaysOpen="False" AllowsTransparency="True" VerticalOffset="-8" HorizontalOffset="-180" Opened="Popup_Opened">
+            <views:TracksOverlay x:Name="overlayTracks"/>
+        </Popup>
+
+        <!-- Settings Overlay Popup (Modal) -->
+        <Popup x:Name="popupSettings" PlacementTarget="{Binding ElementName=mainGrid}"
+               Placement="Center" AllowsTransparency="True" StaysOpen="True" Opened="Popup_Opened">
+            <Grid x:Name="gridSettingsHost" 
+                  Width="{Binding ElementName=mainGrid, Path=ActualWidth}"
+                  Height="{Binding ElementName=mainGrid, Path=ActualHeight}">
+                <views:SettingsOverlay x:Name="overlaySettings"/>
+            </Grid>
+        </Popup>
+
+        <!-- Open URL / Stream Overlay Popup (Modal) -->
+        <Popup x:Name="popupOpenUrl" PlacementTarget="{Binding ElementName=mainGrid}"
+               Placement="Center" AllowsTransparency="True" StaysOpen="True" Opened="Popup_Opened">
+            <Grid x:Name="gridOpenUrlHost" 
+                  Width="{Binding ElementName=mainGrid, Path=ActualWidth}"
+                  Height="{Binding ElementName=mainGrid, Path=ActualHeight}">
+                <views:OpenUrlOverlay x:Name="overlayOpenUrl"/>
+            </Grid>
+        </Popup>
+
+        <!-- Sponsor / Donation Overlay Popup (Modal) -->
+        <Popup x:Name="popupSponsor" PlacementTarget="{Binding ElementName=mainGrid}"
+               Placement="Center" AllowsTransparency="True" StaysOpen="True" Opened="Popup_Opened">
+            <Grid x:Name="gridSponsorHost" 
+                  Width="{Binding ElementName=mainGrid, Path=ActualWidth}"
+                  Height="{Binding ElementName=mainGrid, Path=ActualHeight}">
+                <views:SponsorOverlay x:Name="overlaySponsor"/>
+            </Grid>
+        </Popup>
+
+        <!-- Fade to Black Transition Popup -->
+        <Popup x:Name="popupFade" PlacementTarget="{Binding ElementName=mainGrid}"
+               Placement="Center" AllowsTransparency="True" StaysOpen="True" IsOpen="True">
+            <Border x:Name="borderFade" Background="Black" Opacity="0" IsHitTestVisible="False"
+                    Width="{Binding ElementName=mainGrid, Path=ActualWidth}"
+                    Height="{Binding ElementName=mainGrid, Path=ActualHeight}"/>
+        </Popup>
+
+        </Grid>
+    </Border>
+</Window>

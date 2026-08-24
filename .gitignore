@@ -1,0 +1,54 @@
+# Agent, Handover & Private Instructions
+.agents/
+AGENTS.md
+Instruction.md
+instruction-cn.md
+handover.md
+task.md
+*.ps1
+Fullscreen_Toggle_Performance_Analysis_and_Optimization_Plan.md
+Playlist_System_Design.md
+screen records/
+
+# Build artifacts
+[Bb]in/
+[Oo]bj/
+Demo/
+Release/
+Release_Publish/
+dist/
+*.exe
+*.dll
+*.pdb
+*.cache
+*.baml
+*.g.cs
+
+# Media files & Archives (do not track large test files or backups)
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.flv
+*.wmv
+*.webm
+*.mp3
+*.flac
+*.wav
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+
+# User-specific files
+*.user
+*.suo
+*.vs/
+*.ide/
+.vscode/
+perf_*.txt
+
+# OS generated files
+.DS_Store
+Thumbs.db

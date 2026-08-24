@@ -1,0 +1,44 @@
+# Agent, Handover & Private Instructions
+.agents/
+AGENTS.md
+Instruction.md
+instruction-cn.md
+handover.md
+task.md
+*.ps1
+
+# Build artifacts
+[Bb]in/
+[Oo]bj/
+*.exe
+*.dll
+*.pdb
+*.cache
+*.baml
+*.g.cs
+
+# Media files
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.flv
+*.wmv
+*.webm
+*.mp3
+*.flac
+*.wav
+*.zip
+*.rar
+*.7z
+
+# User-specific files
+*.user
+*.suo
+*.vs/
+*.ide/
+.vscode/
+
+# OS generated files
+.DS_Store
+Thumbs.db
