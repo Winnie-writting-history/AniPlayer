@@ -1,0 +1,111 @@
+<UserControl x:Class="AnniPlayer.Views.OpenUrlOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:services="clr-namespace:AnniPlayer.Services"
+             mc:Ignorable="d">
+
+    <!-- Modal Backdrop Overlay (Click outside to close) -->
+    <Grid Background="#55000000" x:Name="OverlayBackground" MouseDown="Backdrop_MouseDown">
+        <!-- Floating Centered Compact Card -->
+        <Border Width="580" HorizontalAlignment="Center" VerticalAlignment="Center"
+                CornerRadius="12"
+                Background="{DynamicResource ThemeWindowBgBrush}"
+                BorderBrush="{DynamicResource ThemeBorderBrush}"
+                BorderThickness="1"
+                MouseDown="Card_MouseDown">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="32" ShadowDepth="6" Direction="270" Color="#90000000" Opacity="0.75"/>
+            </Border.Effect>
+
+            <Grid Margin="22,18">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/> <!-- Header -->
+                    <RowDefinition Height="Auto"/> <!-- Input + Paste -->
+                    <RowDefinition Height="Auto"/> <!-- Save to Local CheckBox -->
+                    <RowDefinition Height="Auto"/> <!-- Save Directory Picker -->
+                    <RowDefinition Height="Auto"/> <!-- Footer: Hint + Action Buttons -->
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <Grid Grid.Row="0" Margin="0,0,0,12">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="🌐" FontSize="18" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Source={x:Static services:I18nService.Instance}, Path=[OpenUrlTitle]}"
+                                   FontSize="16" FontWeight="Bold" Foreground="{DynamicResource ThemeTextBrush}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Button x:Name="BtnClose" Click="BtnClose_Click" HorizontalAlignment="Right" VerticalAlignment="Center"
+                            Style="{StaticResource ChromeBtn}" Content="&#xE711;" ToolTip="{Binding Source={x:Static services:I18nService.Instance}, Path=[SettingsBtnCancel]}"/>
+                </Grid>
+
+                <!-- Input Box + Paste Button -->
+                <Grid Grid.Row="1" Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox x:Name="TxtUrl" Grid.Column="0" Height="36" FontSize="13"
+                             Style="{StaticResource ThemeTextBoxStyle}"
+                             VerticalContentAlignment="Center" Padding="10,0" Margin="0,0,8,0"
+                             KeyDown="TxtUrl_KeyDown"/>
+
+                    <Button x:Name="BtnPaste" Grid.Column="1" Click="BtnPaste_Click"
+                            Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[BtnPaste]}"
+                            Style="{StaticResource ThemeButtonStyle}" Height="36" Padding="14,0" FontSize="13"/>
+                </Grid>
+
+                <!-- Save to Local CheckBox -->
+                <CheckBox x:Name="CbSaveToLocal" Grid.Row="2"
+                          Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[OpenUrlSaveToLocal]}"
+                          Click="CbSaveToLocal_Click"
+                          FontSize="13.5" Foreground="{DynamicResource ThemeTextBrush}" Margin="0,0,0,10"/>
+
+                <!-- Save Directory Picker (Visible when CbSaveToLocal is checked) -->
+                <Grid x:Name="GridSaveDir" Grid.Row="3" Margin="0,0,0,14" Visibility="Collapsed">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="{Binding Source={x:Static services:I18nService.Instance}, Path=[OpenUrlSavePath]}"
+                               FontSize="13" Foreground="{DynamicResource ThemeTextBrush}" VerticalAlignment="Center" Margin="0,0,8,0" Opacity="0.85"/>
+
+                    <TextBox x:Name="TxtSaveDir" Grid.Column="1" Height="32" FontSize="12.5"
+                             Style="{StaticResource ThemeTextBoxStyle}"
+                             VerticalContentAlignment="Center" Padding="8,0" Margin="0,0,8,0"/>
+
+                    <Button x:Name="BtnBrowseSaveDir" Grid.Column="2" Click="BtnBrowseSaveDir_Click"
+                            Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[SettingsBtnBrowse]}"
+                            Style="{StaticResource ThemeButtonStyle}" Height="32" Padding="12,0" FontSize="12.5"/>
+                </Grid>
+
+                <!-- Footer: Hint on Left + Buttons on Right -->
+                <Grid Grid.Row="4" Margin="0,4,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Hint -->
+                    <TextBlock Grid.Column="0" Text="{Binding Source={x:Static services:I18nService.Instance}, Path=[OpenUrlHint]}"
+                               FontSize="11.5" Foreground="{DynamicResource ThemeTextBrush}" Opacity="0.7"
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
+
+                    <!-- Action Buttons -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="BtnCancel" Click="BtnClose_Click"
+                                Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[SettingsBtnCancel]}"
+                                Style="{StaticResource ThemeButtonStyle}" Height="32" Width="74" Margin="0,0,8,0" FontSize="12.5"/>
+                        <Button x:Name="BtnPlay" Click="BtnPlay_Click"
+                                Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[BtnPlay]}"
+                                Style="{StaticResource ThemePrimaryButtonStyle}"
+                                Height="32" Width="84" FontSize="12.5"/>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

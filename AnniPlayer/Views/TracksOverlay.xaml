@@ -1,0 +1,176 @@
+<UserControl x:Class="AnniPlayer.Views.TracksOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:services="clr-namespace:AnniPlayer.Services"
+             mc:Ignorable="d" 
+             Width="380" MaxHeight="520">
+
+    <Border CornerRadius="12"
+            Background="{DynamicResource ThemeWindowBgBrush}"
+            BorderBrush="{DynamicResource ThemeBorderBrush}"
+            BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="24" ShadowDepth="4" Direction="270" Color="#80000000" Opacity="0.65"/>
+        </Border.Effect>
+
+        <Grid Margin="14,12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Title & Close -->
+                <RowDefinition Height="Auto"/> <!-- Tabs -->
+                <RowDefinition Height="Auto"/> <!-- Content Panel (Auto-sized, no empty gap) -->
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Grid Grid.Row="0" Margin="0,0,0,10">
+                <TextBlock Text="{Binding Source={x:Static services:I18nService.Instance}, Path=[TracksTitle]}"
+                           FontSize="15" FontWeight="Bold" Foreground="{DynamicResource ThemeTextBrush}" VerticalAlignment="Center"/>
+                <Button x:Name="BtnClose" Click="BtnClose_Click" HorizontalAlignment="Right" VerticalAlignment="Center"
+                        Style="{StaticResource ChromeBtn}" Content="&#xE711;" ToolTip="{Binding Source={x:Static services:I18nService.Instance}, Path=[SettingsBtnCancel]}"/>
+            </Grid>
+
+            <!-- Tabs -->
+            <Grid Grid.Row="1" Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <RadioButton x:Name="TabSubtitles" Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[TabSubtitles]}"
+                             IsChecked="True" Checked="TabSubtitles_Checked" Grid.Column="0" Margin="0,0,4,0"
+                             Style="{StaticResource ThemeTabButtonStyle}" Height="32"/>
+                <RadioButton x:Name="TabAudio" Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[TabAudio]}"
+                             Checked="TabAudio_Checked" Grid.Column="1" Margin="4,0,0,0"
+                             Style="{StaticResource ThemeTabButtonStyle}" Height="32"/>
+            </Grid>
+
+            <!-- Content Area -->
+            <Grid Grid.Row="2">
+                <!-- ══ Subtitle Panel ═════════════════════════════════════════ -->
+                <Grid x:Name="PanelSubtitles" Visibility="Visible">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/> <!-- Top Buttons: Disable Subtitles + Load Subtitle -->
+                        <RowDefinition Height="Auto"/> <!-- Track List (Auto height) -->
+                        <RowDefinition Height="Auto"/> <!-- Adjustments -->
+                    </Grid.RowDefinitions>
+
+                    <!-- Top Action Bar (Disable Subtitles + Load) -->
+                    <Grid Grid.Row="0" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <RadioButton x:Name="RadioSubNone" Grid.Column="0" Margin="0,0,4,0"
+                                     Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[SubTrackNone]}"
+                                     GroupName="GroupSubTracks" Click="RadioSubNone_Click"
+                                     Style="{StaticResource ThemeTabButtonStyle}" Height="32"/>
+                        <Button x:Name="BtnLoadExternalSub" Click="BtnLoadExternalSub_Click" Grid.Column="1" Margin="4,0,0,0"
+                                Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[BtnLoadExternalSub]}"
+                                Style="{StaticResource ThemeTabActionButtonStyle}" Height="32"/>
+                    </Grid>
+
+                    <!-- Track List ScrollViewer -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,8" MaxHeight="180">
+                        <StackPanel x:Name="StackSubTracks"/>
+                    </ScrollViewer>
+
+                    <!-- Subtitle Adjustments -->
+                    <Border Grid.Row="2" CornerRadius="8" Background="#18000000" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1" Padding="10,6">
+                        <StackPanel>
+                            <!-- Delay -->
+                            <Grid Margin="0,2,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Source={x:Static services:I18nService.Instance}, Path=[SubDelayTitle]}" FontSize="12" Foreground="{DynamicResource ThemeTextBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Click="BtnSubDelayMinus_Click" Content="- 0.5s" Style="{StaticResource ThemeButtonStyle}" Height="24" Padding="6,1" Margin="0,0,3,0" FontSize="11"/>
+                                    <TextBox x:Name="TxtSubDelay" Text="0.0s" FontSize="11" Foreground="{DynamicResource ThemeAccentBrush}"
+                                             Background="#20000000" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1"
+                                             VerticalAlignment="Center" VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
+                                             Margin="3,0" Width="48" Height="24" GotFocus="DelayInput_GotFocus" PreviewMouseDown="DelayInput_PreviewMouseDown"
+                                             KeyDown="TxtSubDelay_KeyDown" LostFocus="TxtSubDelay_LostFocus"/>
+                                    <Button Click="BtnSubDelayPlus_Click" Content="+ 0.5s" Style="{StaticResource ThemeButtonStyle}" Height="24" Padding="6,1" Margin="3,0,3,0" FontSize="11"/>
+                                    <Button Click="BtnSubDelayReset_Click" Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[BtnReset]}" Style="{StaticResource ThemeButtonStyle}" Height="24" Padding="6,1" FontSize="11"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Position -->
+                            <Grid Margin="0,2,0,2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Source={x:Static services:I18nService.Instance}, Path=[SubPosTitle]}" FontSize="12" Foreground="{DynamicResource ThemeTextBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Click="BtnSubPosUp_Click" Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[BtnSubPosUp]}" Style="{StaticResource ThemeButtonStyle}" Height="24" Padding="6,1" Margin="0,0,3,0" FontSize="11"/>
+                                    <Button Click="BtnSubPosDown_Click" Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[BtnSubPosDown]}" Style="{StaticResource ThemeButtonStyle}" Height="24" Padding="6,1" Margin="3,0,3,0" FontSize="11"/>
+                                    <Button Click="BtnSubPosReset_Click" Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[BtnReset]}" Style="{StaticResource ThemeButtonStyle}" Height="24" Padding="6,1" FontSize="11"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- ══ Audio Track Panel ══════════════════════════════════════ -->
+                <Grid x:Name="PanelAudio" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/> <!-- Top Buttons: Disable Audio + Load Audio -->
+                        <RowDefinition Height="Auto"/> <!-- Track List (Auto height) -->
+                        <RowDefinition Height="Auto"/> <!-- Audio Delay Adjustments -->
+                        <RowDefinition Height="Auto"/> <!-- Audio Enhancements -->
+                    </Grid.RowDefinitions>
+
+                    <!-- Top Action Bar (Disable Audio + Load Audio) -->
+                    <Grid Grid.Row="0" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <RadioButton x:Name="RadioAudioNone" Grid.Column="0" Margin="0,0,4,0"
+                                     Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[AudioTrackNone]}"
+                                     GroupName="GroupAudioTracks" Click="RadioAudioNone_Click"
+                                     Style="{StaticResource ThemeTabButtonStyle}" Height="32"/>
+                        <Button x:Name="BtnLoadExternalAudio" Click="BtnLoadExternalAudio_Click" Grid.Column="1" Margin="4,0,0,0"
+                                Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[BtnLoadExternalAudio]}"
+                                Style="{StaticResource ThemeTabActionButtonStyle}" Height="32"/>
+                    </Grid>
+
+                    <!-- Track List ScrollViewer -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,8" MaxHeight="180">
+                        <StackPanel x:Name="StackAudioTracks"/>
+                    </ScrollViewer>
+
+                    <!-- Audio Delay Adjustment -->
+                    <Border Grid.Row="2" CornerRadius="8" Background="#18000000" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1" Padding="10,6" Margin="0,0,0,8">
+                        <Grid Margin="0,2">
+                            <TextBlock Text="{Binding Source={x:Static services:I18nService.Instance}, Path=[AudioDelayTitle]}" FontSize="12" Foreground="{DynamicResource ThemeTextBrush}" VerticalAlignment="Center"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Click="BtnAudioDelayMinus_Click" Content="- 0.1s" Style="{StaticResource ThemeButtonStyle}" Height="24" Padding="6,1" Margin="0,0,3,0" FontSize="11"/>
+                                <TextBox x:Name="TxtAudioDelay" Text="0.0s" FontSize="11" Foreground="{DynamicResource ThemeAccentBrush}"
+                                         Background="#20000000" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1"
+                                         VerticalAlignment="Center" VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
+                                         Margin="3,0" Width="48" Height="24" GotFocus="DelayInput_GotFocus" PreviewMouseDown="DelayInput_PreviewMouseDown"
+                                         KeyDown="TxtAudioDelay_KeyDown" LostFocus="TxtAudioDelay_LostFocus"/>
+                                <Button Click="BtnAudioDelayPlus_Click" Content="+ 0.1s" Style="{StaticResource ThemeButtonStyle}" Height="24" Padding="6,1" Margin="3,0,3,0" FontSize="11"/>
+                                <Button Click="BtnAudioDelayReset_Click" Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[BtnReset]}" Style="{StaticResource ThemeButtonStyle}" Height="24" Padding="6,1" FontSize="11"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Audio Enhancements (Voice Boost / Night Mode DRC) -->
+                    <Border Grid.Row="3" CornerRadius="8" Background="#18000000" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1" Padding="10,8">
+                        <StackPanel>
+                            <CheckBox x:Name="ChkNightMode" Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[AudioNightMode]}"
+                                      FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource ThemeTextBrush}"
+                                      Click="ChkNightMode_Click" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Source={x:Static services:I18nService.Instance}, Path=[AudioNightModeDesc]}"
+                                       FontSize="11" Foreground="{DynamicResource ThemeSubTextBrush}" Margin="20,3,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>
