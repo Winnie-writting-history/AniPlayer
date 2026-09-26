@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.IO.Pipes;
 using System.Runtime.InteropServices;
@@ -781,6 +781,41 @@ namespace AnniPlayer
                     handled = true;
                 }
             }
+
+            if (msg == 0x020B /* WM_XBUTTONDOWN */)
+            {
+                int xbutton = ((int)wParam.ToInt64() >> 16) & 0xFFFF;
+                System.Windows.Input.MouseButton btn = (xbutton == 1) 
+                    ? System.Windows.Input.MouseButton.XButton1 
+                    : System.Windows.Input.MouseButton.XButton2;
+                if (HandleMouseShortcut(btn, Keyboard.Modifiers))
+                {
+                    handled = true;
+                    return (IntPtr)1;
+                }
+            }
+
+            if (msg == 0x0319 /* WM_APPCOMMAND */)
+            {
+                int cmd = (int)((((uint)lParam.ToInt64()) >> 16) & 0xFFF);
+                if (cmd == 1 /* APPCOMMAND_BROWSER_BACKWARD */)
+                {
+                    if (HandleMouseShortcut(System.Windows.Input.MouseButton.XButton1, Keyboard.Modifiers))
+                    {
+                        handled = true;
+                        return (IntPtr)1;
+                    }
+                }
+                else if (cmd == 2 /* APPCOMMAND_BROWSER_FORWARD */)
+                {
+                    if (HandleMouseShortcut(System.Windows.Input.MouseButton.XButton2, Keyboard.Modifiers))
+                    {
+                        handled = true;
+                        return (IntPtr)1;
+                    }
+                }
+            }
+
             return IntPtr.Zero;
         }
 
@@ -854,11 +889,13 @@ namespace AnniPlayer
             UpdatePlaylistCountText();
             PlaylistManager.Instance.Items.CollectionChanged += (s, ev) => UpdatePlaylistCountText();
             I18nService.Instance.PropertyChanged += (s, ev) => UpdatePlaylistCountText();
+            PlaylistManager.Instance.SortOptionChanged += (opt) => Dispatcher.Invoke(() => UpdateSortMenuUI(opt));
 
             overlayLibrary.CloseRequested += (s, ev) => { CloseLibraryOverlay(); };
             overlayLibrary.PlayRequested += (s, playlistName) => 
             {
                 CloseLibraryOverlay();
+                UpdateSortMenuUI(PlaylistSortOption.NameAscending);
                 _ = PlaylistManager.Instance.LoadPlaylistAsync(playlistName, null, onPlayTarget: (targetPath) =>
                 {
                     PlayFile(targetPath);
@@ -867,6 +904,7 @@ namespace AnniPlayer
             overlayLibrary.PlaySpecificFileRequested += (playlistName, filePath) =>
             {
                 CloseLibraryOverlay();
+                UpdateSortMenuUI(PlaylistSortOption.NameAscending);
                 if (IsShiftKeyDown() && File.Exists(filePath))
                 {
                     HandleDropPaths(new[] { filePath });
@@ -970,14 +1008,10 @@ namespace AnniPlayer
             UpdateAutoCropUI();
 
             // Initialize Sort Menu checkmarks
-            if (startCfg.PlaylistSortMode != -1 && Enum.IsDefined(typeof(PlaylistSortOption), startCfg.PlaylistSortMode))
-            {
-                var option = (PlaylistSortOption)startCfg.PlaylistSortMode;
-                menuSortNameAsc.IsChecked = option == PlaylistSortOption.NameAscending;
-                menuSortNameDesc.IsChecked = option == PlaylistSortOption.NameDescending;
-                menuSortDateAsc.IsChecked = option == PlaylistSortOption.DateAscending;
-                menuSortDateDesc.IsChecked = option == PlaylistSortOption.DateDescending;
-            }
+            var initialSort = (startCfg.PlaylistSortMode != -1 && Enum.IsDefined(typeof(PlaylistSortOption), startCfg.PlaylistSortMode))
+                ? (PlaylistSortOption)startCfg.PlaylistSortMode
+                : PlaylistSortOption.NameAscending;
+            UpdateSortMenuUI(initialSort);
 
             UpdateOuterBorder();
             this.LocationChanged += (s, e) => UpdateIdleHintOverlay();
@@ -1000,6 +1034,17 @@ namespace AnniPlayer
             // Click or Drag video to play/pause/drag window or double click for fullscreen
             _videoPanel.MouseDown += (s, ev) =>
             {
+                if (ev.Button == System.Windows.Forms.MouseButtons.XButton1 ||
+                    ev.Button == System.Windows.Forms.MouseButtons.XButton2 ||
+                    ev.Button == System.Windows.Forms.MouseButtons.Middle)
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        HandleMouseShortcut(ev.Button, Keyboard.Modifiers);
+                    });
+                    return;
+                }
+
                 if (ev.Button == System.Windows.Forms.MouseButtons.Left)
                 {
                     long now = Environment.TickCount64;
@@ -5447,7 +5492,8 @@ namespace AnniPlayer
                         {
                             double vr = vw / vh;
                             double gr = pw / ph;
-                            if (vr < gr - 0.01)
+                            double screenBlackBars = (vr < gr) ? (pw - ph * vr) : (ph - pw / vr);
+                            if (vr < gr && screenBlackBars >= 2.0)
                             {
                                 // 竖屏 / 细长比例视频（如 9:16 在 16:9 窗口中）：满高居中，两侧露出大理石材质底图
                                 double fittedW = Math.Round(ph * vr);
@@ -5457,7 +5503,7 @@ namespace AnniPlayer
                                 videoHost.VerticalAlignment = System.Windows.VerticalAlignment.Stretch;
                                 return;
                             }
-                            else if (vr > gr + 0.01)
+                            else if (vr > gr && screenBlackBars >= 2.0)
                             {
                                 // 超宽屏比例视频（如 21:9 在 4:3 窗口中）：满宽居中，上下露出大理石材质底图
                                 double fittedH = Math.Round(pw / vr);
@@ -5492,15 +5538,19 @@ namespace AnniPlayer
                 double vrFill = vw / vh;
                 double pr = pw / ph;
 
-                if (Math.Abs(vrFill - pr) > 0.05)
+                double canvasW = (vrFill > pr) ? vw : vh * pr;
+                double canvasH = (vrFill > pr) ? (vw / pr) : vh;
+
+                int vidW = ((int)Math.Round(vw) / 2) * 2;
+                int vidH = ((int)Math.Round(vh) / 2) * 2;
+                int targetW = Math.Max(vidW, ((int)Math.Round(canvasW) / 2) * 2);
+                int targetH = Math.Max(vidH, ((int)Math.Round(canvasH) / 2) * 2);
+
+                // Calculate the actual physical black bar thickness on the screen (in screen pixels)
+                double screenBlackBarsFill = (vrFill < pr) ? (pw - ph * vrFill) : (ph - pw / vrFill);
+
+                if (screenBlackBarsFill >= 1.5 && (targetW > vidW || targetH > vidH))
                 {
-                    double canvasW = (vrFill > pr) ? vw : vh * pr;
-                    double canvasH = (vrFill > pr) ? (vw / pr) : vh;
-                    
-                    int targetW = ((int)Math.Round(canvasW) / 2) * 2;
-                    int targetH = ((int)Math.Round(canvasH) / 2) * 2;
-                    int vidW = ((int)Math.Round(vw) / 2) * 2;
-                    int vidH = ((int)Math.Round(vh) / 2) * 2;
 
                     // Resolution-Invariant Downsampling: Lock maximum bound to 256px (O(1) constant ultra-low compute even on 4K/8K)
                     const int MAX_BLUR_BOUND = 256;
@@ -7113,8 +7163,71 @@ namespace AnniPlayer
             return false;
         }
 
+        private long _lastMouseComboTick = 0;
+        private string _lastMouseComboStr = "";
+
+        private bool HandleMouseShortcut(System.Windows.Input.MouseButton mouseButton, ModifierKeys modifiers)
+        {
+            if (mouseButton != System.Windows.Input.MouseButton.XButton1 &&
+                mouseButton != System.Windows.Input.MouseButton.XButton2 &&
+                mouseButton != System.Windows.Input.MouseButton.Middle)
+            {
+                return false;
+            }
+
+            if (popupSettings != null && popupSettings.IsOpen && Views.SettingsOverlay.IsRecordingKey)
+            {
+                if (overlaySettings.RecordMouseButton(mouseButton, modifiers))
+                {
+                    return true;
+                }
+            }
+
+            if ((popupSettings != null && popupSettings.IsOpen) || 
+                (popupLibrary != null && popupLibrary.IsOpen) || 
+                (popupOpenUrl != null && popupOpenUrl.IsOpen))
+            {
+                return false;
+            }
+
+            string combo = Views.SettingsOverlay.FormatMouseCombo(mouseButton, modifiers);
+            if (string.IsNullOrEmpty(combo)) return false;
+
+            long now = Environment.TickCount64;
+            if (combo == _lastMouseComboStr && (now - _lastMouseComboTick < 250))
+            {
+                return true; // Debounce duplicate event
+            }
+
+            if (ExecutePlayerCombo(combo))
+            {
+                _lastMouseComboTick = now;
+                _lastMouseComboStr = combo;
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool HandleMouseShortcut(System.Windows.Forms.MouseButtons mouseButton, ModifierKeys modifiers)
+        {
+            System.Windows.Input.MouseButton wpfBtn;
+            if (mouseButton == System.Windows.Forms.MouseButtons.XButton1) wpfBtn = System.Windows.Input.MouseButton.XButton1;
+            else if (mouseButton == System.Windows.Forms.MouseButtons.XButton2) wpfBtn = System.Windows.Input.MouseButton.XButton2;
+            else if (mouseButton == System.Windows.Forms.MouseButtons.Middle) wpfBtn = System.Windows.Input.MouseButton.Middle;
+            else return false;
+
+            return HandleMouseShortcut(wpfBtn, modifiers);
+        }
+
         private void Window_PreviewMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
+            if (HandleMouseShortcut(e.ChangedButton, Keyboard.Modifiers))
+            {
+                e.Handled = true;
+                return;
+            }
+
             if (!popupSettings.IsOpen && !popupLibrary.IsOpen && !(popupOpenUrl != null && popupOpenUrl.IsOpen))
             {
                 EnsureMainCanvasFocusAndDisableIme();
@@ -7204,6 +7317,67 @@ namespace AnniPlayer
         private bool ExecutePlayerHotkey(Key realKey, ModifierKeys modifiers)
         {
             string currentCombo = Views.SettingsOverlay.FormatKeyCombo(realKey, modifiers);
+            if (ExecutePlayerCombo(currentCombo)) return true;
+
+            switch (realKey)
+            {
+                case Key.OemBackslash:
+                case Key.Back:
+                    SetPlaybackSpeed(1.0);
+                    return true;
+                case Key.F2:
+                    MenuSettings_Click(null, new RoutedEventArgs());
+                    return true;
+                case Key.Escape:
+                    if (popupSettings != null && popupSettings.IsOpen)
+                    {
+                        CloseSettingsOverlay();
+                        return true;
+                    }
+                    else if (popupLibrary != null && popupLibrary.IsOpen)
+                    {
+                        CloseLibraryOverlay();
+                        return true;
+                    }
+                    else if (popupSideDrawer != null && popupSideDrawer.IsOpen)
+                    {
+                        popupSideDrawer.IsOpen = false;
+                        _isDrawerOpen = false;
+                        return true;
+                    }
+                    else if (_isPipMode)
+                    {
+                        TogglePipMode();
+                        return true;
+                    }
+                    else if (_isFullscreen)
+                    {
+                        ToggleFullscreen();
+                        return true;
+                    }
+                    else if (SettingsService.Instance.Config.DoubleEscToExit)
+                    {
+                        DateTime now = DateTime.Now;
+                        if ((now - _lastEscPressTime).TotalMilliseconds < 500)
+                        {
+                            Close();
+                        }
+                        else
+                        {
+                            _lastEscPressTime = now;
+                            ShowOsd(I18nService.Instance["OsdPressEscAgainToExit"]);
+                        }
+                        return true;
+                    }
+                    break;
+            }
+
+            return false;
+        }
+
+        private bool ExecutePlayerCombo(string currentCombo)
+        {
+            if (string.IsNullOrEmpty(currentCombo)) return false;
             var hk = SettingsService.Instance.Config.Hotkeys ??= new HotkeyConfig();
 
             if (IsHotkeyMatch(currentCombo, hk.PlayPause, hk.SecPlayPause))
@@ -7407,58 +7581,6 @@ namespace AnniPlayer
                 return true;
             }
 
-            switch (realKey)
-            {
-                case Key.OemBackslash:
-                case Key.Back:
-                    SetPlaybackSpeed(1.0);
-                    return true;
-                case Key.F2:
-                    MenuSettings_Click(null, new RoutedEventArgs());
-                    return true;
-                case Key.Escape:
-                    if (popupSettings != null && popupSettings.IsOpen)
-                    {
-                        CloseSettingsOverlay();
-                        return true;
-                    }
-                    else if (popupLibrary != null && popupLibrary.IsOpen)
-                    {
-                        CloseLibraryOverlay();
-                        return true;
-                    }
-                    else if (popupSideDrawer != null && popupSideDrawer.IsOpen)
-                    {
-                        popupSideDrawer.IsOpen = false;
-                        _isDrawerOpen = false;
-                        return true;
-                    }
-                    else if (_isPipMode)
-                    {
-                        TogglePipMode();
-                        return true;
-                    }
-                    else if (_isFullscreen)
-                    {
-                        ToggleFullscreen();
-                        return true;
-                    }
-                    else if (SettingsService.Instance.Config.DoubleEscToExit)
-                    {
-                        DateTime now = DateTime.Now;
-                        if ((now - _lastEscPressTime).TotalMilliseconds < 500)
-                        {
-                            Close();
-                        }
-                        else
-                        {
-                            _lastEscPressTime = now;
-                            ShowOsd(I18nService.Instance["OsdPressEscAgainToExit"]);
-                        }
-                        return true;
-                    }
-                    break;
-            }
 
             return false;
         }
@@ -9006,7 +9128,14 @@ namespace AnniPlayer
 
         private void BtnClearPlaylist_Click(object sender, RoutedEventArgs e)
         {
-            PlaylistManager.Instance.Clear();
+            if (PlaylistManager.Instance.Items.Count == 0) return;
+            bool isEn = I18nService.Instance.CurrentLanguage == "en-US";
+            string title = isEn ? "Clear Playlist" : "清空播放列表";
+            string msg = isEn ? "Are you sure you want to clear the current playlist?" : "确定要清空当前播放列表吗？";
+            if (System.Windows.MessageBox.Show(msg, title, MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            {
+                PlaylistManager.Instance.Clear();
+            }
         }
 
         [System.Runtime.InteropServices.DllImport("user32.dll")]
@@ -9380,19 +9509,22 @@ namespace AnniPlayer
             }
         }
 
+        public void UpdateSortMenuUI(PlaylistSortOption option)
+        {
+            if (menuSortNameAsc == null) return;
+            menuSortNameAsc.IsChecked  = (option == PlaylistSortOption.NameAscending);
+            menuSortNameDesc.IsChecked = (option == PlaylistSortOption.NameDescending);
+            menuSortDateDesc.IsChecked = (option == PlaylistSortOption.DateDescending);
+            menuSortDateAsc.IsChecked  = (option == PlaylistSortOption.DateAscending);
+        }
+
         private void SortMenuItem_Click(object sender, RoutedEventArgs e)
         {
             if (sender is not System.Windows.Controls.MenuItem clicked) return;
 
-            // Uncheck all sort menu items
-            menuSortNameAsc.IsChecked  = false;
-            menuSortNameDesc.IsChecked = false;
-            menuSortDateDesc.IsChecked = false;
-            menuSortDateAsc.IsChecked  = false;
-            clicked.IsChecked = true;
-
             if (Enum.TryParse<PlaylistSortOption>(clicked.Tag?.ToString(), out var option))
             {
+                UpdateSortMenuUI(option);
                 PlaylistManager.Instance.Sort(option);
                 // Scroll to current item in playlist
                 var cur = PlaylistManager.Instance.GetCurrent();

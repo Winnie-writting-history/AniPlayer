@@ -1,4 +1,4 @@
-<Window x:Class="AnniPlayer.MainWindow"
+﻿<Window x:Class="AnniPlayer.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -1182,7 +1182,7 @@
                                         </ContextMenu>
                                     </Button.ContextMenu>
                                 </Button>
-                                <Button x:Name="btnClearPlaylist" Content="&#xE74D;" ToolTip="{Binding [TooltipClearPlaylist], Source={x:Static i18n:I18nService.Instance}}" FontFamily="Segoe MDL2 Assets" Style="{StaticResource TransportBtn}" FontSize="14" Click="BtnClearPlaylist_Click"/>
+                                <Button x:Name="btnClearPlaylist" Content="&#xE74D;" ToolTip="{Binding [TooltipClear], Source={x:Static i18n:I18nService.Instance}}" FontFamily="Segoe MDL2 Assets" Style="{StaticResource TransportBtn}" FontSize="14" Click="BtnClearPlaylist_Click"/>
                             </StackPanel>
                         </Grid>
                     </Border>

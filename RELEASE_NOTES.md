@@ -41,8 +41,8 @@
 
 ### 🛡️ SHA-256 Checksums
 ```text
-d6dfb114edfd4f08827363e5fdc49febaceed8d93747927188f4e12f13283d53  AniPlayer-v1.0.0-Win11-FrameworkDependent.zip (Win11 Framework-Dependent)
-d1cf6abccccd1ea083c180ec1a93d564d4af473884ee1fa242c53b8aa7a1b3b0  AniPlayer-v1.0.0-Windows-x64-Self-Contained.zip (Self-Contained Standalone)
+bb7a926eec9187f49e81f1d47ebb2d65b672fa00833e7bc21f80700515d9f73b  AniPlayer-v1.0.0-Win11-FrameworkDependent.zip (Win11 Framework-Dependent)
+bf6f763db2654a2257ed6c4b4d05070547e518a2abbb0dc29f4e92007eb6a373  AniPlayer-v1.0.0-Windows-x64-Self-Contained.zip (Self-Contained Standalone)
 ```
 
 ---

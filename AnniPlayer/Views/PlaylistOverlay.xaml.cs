@@ -1,4 +1,4 @@
-
+﻿
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -78,6 +78,7 @@ namespace AnniPlayer.Views
 
         private ObservableCollection<string> _editFiles = new ObservableCollection<string>();
         private string _editingPlaylistName = string.Empty;
+        private bool _isNewPlaylist = false;
         private ObservableCollection<MergeItem> _mergeItems = new ObservableCollection<MergeItem>();
 
         public PlaylistOverlay()
@@ -96,6 +97,10 @@ namespace AnniPlayer.Views
 
         public void ResetAndRefresh()
         {
+            _isNewPlaylist = false;
+            _editingPlaylistName = string.Empty;
+            _editFiles.Clear();
+            _mergeItems.Clear();
             this.Focusable = true;
             this.Focus();
             SwitchToView("Selection");
@@ -108,11 +113,15 @@ namespace AnniPlayer.Views
             {
                 if (viewEdit.Visibility == Visibility.Visible)
                 {
+                    _isNewPlaylist = false;
+                    _editingPlaylistName = string.Empty;
+                    _editFiles.Clear();
                     SwitchToView("Selection");
                     e.Handled = true;
                 }
                 else if (viewMerge.Visibility == Visibility.Visible)
                 {
+                    _mergeItems.Clear();
                     SwitchToView("Selection");
                     e.Handled = true;
                 }
@@ -138,14 +147,18 @@ namespace AnniPlayer.Views
             else if (viewName == "Edit")
             {
                 viewEdit.Visibility = Visibility.Visible;
-                txtTitle.Text = I18nService.Instance["LibraryTitleEdit"];
+                txtTitle.Text = _isNewPlaylist 
+                    ? I18nService.Instance["LibraryTitleNew"] 
+                    : I18nService.Instance["LibraryTitleEdit"];
                 txtEditName.Focus();
+                txtEditName.SelectAll();
             }
             else if (viewName == "Merge")
             {
                 viewMerge.Visibility = Visibility.Visible;
                 txtTitle.Text = I18nService.Instance["LibraryTitleMerge"];
                 txtMergeName.Focus();
+                txtMergeName.SelectAll();
             }
         }
 
@@ -258,6 +271,15 @@ namespace AnniPlayer.Views
             }
         }
 
+        private void LbPlaylists_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Delete && lbPlaylists.SelectedValue is string name)
+            {
+                e.Handled = true;
+                ConfirmAndDeletePlaylist(name);
+            }
+        }
+
         private void LbFiles_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             if (lbPlaylists.SelectedValue is string playlistName && lbFiles.SelectedItem is FileItem item)
@@ -269,6 +291,10 @@ namespace AnniPlayer.Views
 
         private void BtnClose_Click(object sender, RoutedEventArgs e)
         {
+            _isNewPlaylist = false;
+            _editingPlaylistName = string.Empty;
+            _editFiles.Clear();
+            _mergeItems.Clear();
             CloseRequested?.Invoke(this, EventArgs.Empty);
         }
 
@@ -283,26 +309,11 @@ namespace AnniPlayer.Views
 
         private void BtnNew_Click(object sender, RoutedEventArgs e)
         {
-            string name = "Playlist_" + DateTime.Now.ToString("MMdd_HHmmss");
-            if (PlaylistManager.Instance.Items.Count > 0)
-            {
-                PlaylistManager.Instance.SaveAsPlaylist(name);
-            }
-            else
-            {
-                PlaylistManager.Instance.SavedPlaylists[name] = new List<string>();
-                PlaylistManager.Instance.SaveLibrary();
-            }
-            RefreshPlaylists();
-            lbPlaylists.SelectedValue = name;
-
-            _editingPlaylistName = name;
-            txtEditName.Text = name;
+            _isNewPlaylist = true;
+            _editingPlaylistName = string.Empty;
+            string defaultName = "Playlist_" + DateTime.Now.ToString("MMdd_HHmmss");
+            txtEditName.Text = defaultName;
             _editFiles.Clear();
-            if (PlaylistManager.Instance.SavedPlaylists.TryGetValue(name, out var files))
-            {
-                foreach (var f in files) _editFiles.Add(f);
-            }
             SwitchToView("Edit");
         }
 
@@ -391,8 +402,31 @@ namespace AnniPlayer.Views
         {
             if (lbPlaylists.SelectedValue is string name)
             {
+                ConfirmAndDeletePlaylist(name);
+            }
+        }
+
+        private void ConfirmAndDeletePlaylist(string name)
+        {
+            string title = I18nService.Instance["LibraryDeleteConfirmTitle"];
+            string template = I18nService.Instance["LibraryDeleteConfirmMsg"];
+            string message = string.Format(template, name);
+
+            var result = System.Windows.MessageBox.Show(
+                message, 
+                title, 
+                System.Windows.MessageBoxButton.YesNo, 
+                System.Windows.MessageBoxImage.Warning);
+
+            if (result == System.Windows.MessageBoxResult.Yes)
+            {
                 PlaylistManager.Instance.DeletePlaylist(name);
                 RefreshPlaylists();
+                if (lbPlaylists.Items.Count == 0)
+                {
+                    lbFiles.ItemsSource = null;
+                    txtSelectedPlaylist.Text = I18nService.Instance["LibraryNoSelection"];
+                }
             }
         }
 
@@ -402,6 +436,7 @@ namespace AnniPlayer.Views
         {
             if (lbPlaylists.SelectedValue is string name)
             {
+                _isNewPlaylist = false;
                 _editingPlaylistName = name;
                 txtEditName.Text = name;
                 _editFiles.Clear();
@@ -415,27 +450,90 @@ namespace AnniPlayer.Views
 
         private void BtnCancelEdit_Click(object sender, RoutedEventArgs e)
         {
+            _isNewPlaylist = false;
+            _editingPlaylistName = string.Empty;
+            _editFiles.Clear();
             SwitchToView("Selection");
         }
 
         private void BtnSaveEdit_Click(object sender, RoutedEventArgs e)
         {
             string newName = txtEditName.Text.Trim();
-            if (string.IsNullOrEmpty(newName)) return;
-
-            // Remove old
-            if (_editingPlaylistName != newName)
+            if (string.IsNullOrEmpty(newName))
             {
-                PlaylistManager.Instance.DeletePlaylist(_editingPlaylistName);
+                bool isEn = I18nService.Instance.CurrentLanguage == "en-US";
+                System.Windows.MessageBox.Show(
+                    isEn ? "Playlist name cannot be empty." : "播放列表名称不能为空。",
+                    isEn ? "Warning" : "提示",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
             }
 
-            // Save new
-            PlaylistManager.Instance.SavedPlaylists[newName] = new List<string>(_editFiles);
-            PlaylistManager.Instance.SaveLibrary();
+            if (_isNewPlaylist)
+            {
+                if (PlaylistManager.Instance.SavedPlaylists.ContainsKey(newName))
+                {
+                    bool isEn = I18nService.Instance.CurrentLanguage == "en-US";
+                    var result = System.Windows.MessageBox.Show(
+                        isEn ? $"A playlist named \"{newName}\" already exists. Overwrite it?" : $"已存在名为「{newName}」的播放列表，是否覆盖？",
+                        isEn ? "Confirm Overwrite" : "确认覆盖",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question);
+                    if (result != MessageBoxResult.Yes)
+                    {
+                        return;
+                    }
+                }
 
-            SwitchToView("Selection");
-            RefreshPlaylists();
-            lbPlaylists.SelectedValue = newName;
+                PlaylistManager.Instance.SavedPlaylists[newName] = new List<string>(_editFiles);
+                PlaylistManager.Instance.SaveLibrary();
+                _isNewPlaylist = false;
+                _editingPlaylistName = string.Empty;
+                _editFiles.Clear();
+
+                SwitchToView("Selection");
+                RefreshPlaylistsPreserveSelection(newName);
+            }
+            else
+            {
+                if (_editingPlaylistName != newName)
+                {
+                    if (PlaylistManager.Instance.SavedPlaylists.ContainsKey(newName))
+                    {
+                        bool isEn = I18nService.Instance.CurrentLanguage == "en-US";
+                        var result = System.Windows.MessageBox.Show(
+                            isEn ? $"A playlist named \"{newName}\" already exists. Overwrite it?" : $"已存在名为「{newName}」的播放列表，是否覆盖？",
+                            isEn ? "Confirm Overwrite" : "确认覆盖",
+                            MessageBoxButton.YesNo,
+                            MessageBoxImage.Question);
+                        if (result != MessageBoxResult.Yes)
+                        {
+                            return;
+                        }
+                    }
+
+                    PlaylistManager.Instance.DeletePlaylist(_editingPlaylistName);
+                }
+
+                PlaylistManager.Instance.SavedPlaylists[newName] = new List<string>(_editFiles);
+                PlaylistManager.Instance.SaveLibrary();
+                _isNewPlaylist = false;
+                _editingPlaylistName = string.Empty;
+                _editFiles.Clear();
+
+                SwitchToView("Selection");
+                RefreshPlaylistsPreserveSelection(newName);
+            }
+        }
+
+        private void LbEditFiles_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Delete && lbEditFiles.SelectedItem is string file)
+            {
+                _editFiles.Remove(file);
+                e.Handled = true;
+            }
         }
 
         private void BtnRemoveVideo_Click(object sender, RoutedEventArgs e)
@@ -664,6 +762,7 @@ namespace AnniPlayer.Views
 
         private void BtnCancelMerge_Click(object sender, RoutedEventArgs e)
         {
+            _mergeItems.Clear();
             SwitchToView("Selection");
         }
 
@@ -686,11 +785,25 @@ namespace AnniPlayer.Views
 
             if (combinedFiles.Count > 0)
             {
+                if (PlaylistManager.Instance.SavedPlaylists.ContainsKey(newName))
+                {
+                    bool isEn = I18nService.Instance.CurrentLanguage == "en-US";
+                    var result = System.Windows.MessageBox.Show(
+                        isEn ? $"A playlist named \"{newName}\" already exists. Overwrite it?" : $"已存在名为「{newName}」的播放列表，是否覆盖？",
+                        isEn ? "Confirm Overwrite" : "确认覆盖",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question);
+                    if (result != MessageBoxResult.Yes)
+                    {
+                        return;
+                    }
+                }
+
                 PlaylistManager.Instance.SavedPlaylists[newName] = combinedFiles.ToList();
                 PlaylistManager.Instance.SaveLibrary();
+                _mergeItems.Clear();
                 SwitchToView("Selection");
-                RefreshPlaylists();
-                lbPlaylists.SelectedValue = newName;
+                RefreshPlaylistsPreserveSelection(newName);
             }
         }
 

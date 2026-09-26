@@ -1,4 +1,4 @@
-{
+﻿{
   "_info": "Ani player Language Pack - English (en-US)\nNote: Only modify the values on the right. Do not change the keys on the left.",
   "LanguageDisplayName": "English (en-US)",
 
@@ -308,6 +308,7 @@
     "SkinLoadErrorMessage": "Failed to parse skin \"{0}\". Automatically rolled back to disabled skin state.\n\nError details:\n{1}",
 
     "LibraryTitle": "Media Library",
+    "LibraryTitleNew": "New Playlist",
     "LibraryTitleEdit": "Edit Playlist",
     "LibraryTitleMerge": "Merge Playlists",
     "LibraryVideosCount": "{0} Media Files",

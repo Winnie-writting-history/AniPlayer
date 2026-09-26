@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Text.Json;
 using System.ComponentModel;
@@ -116,8 +116,8 @@ namespace AnniPlayer.Services
         public string SecVolumeDown { get; set; } = "";
         public string SecToggleMute { get; set; } = "";
         public string SecToggleFullscreen { get; set; } = "";
-        public string SecPrevMedia { get; set; } = "";
-        public string SecNextMedia { get; set; } = "";
+        public string SecPrevMedia { get; set; } = "XButton1";
+        public string SecNextMedia { get; set; } = "XButton2";
         public string SecScreenshot { get; set; } = "";
         public string SecAbLoop { get; set; } = "";
         public string SecTogglePip { get; set; } = "";

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -268,7 +268,7 @@ namespace AnniPlayer.Views
 
         public static bool IsRecordingKey { get; set; } = false;
 
-        private static string FormatDisplayHotkey(string val)
+        public static string FormatDisplayHotkey(string val)
         {
             if (string.IsNullOrEmpty(val))
             {
@@ -277,7 +277,22 @@ namespace AnniPlayer.Views
                     unbound = I18nService.Instance.CurrentLanguage == "en-US" ? "Not Bound" : "未绑定";
                 return unbound;
             }
-            return val;
+
+            bool isEn = I18nService.Instance.CurrentLanguage == "en-US";
+            string display = val;
+            if (isEn)
+            {
+                display = display.Replace("XButton1", "Mouse 4 (Back)");
+                display = display.Replace("XButton2", "Mouse 5 (Fwd)");
+                display = display.Replace("MiddleButton", "Middle Click");
+            }
+            else
+            {
+                display = display.Replace("XButton1", "鼠标后退 (M4)");
+                display = display.Replace("XButton2", "鼠标前进 (M5)");
+                display = display.Replace("MiddleButton", "鼠标中键");
+            }
+            return display;
         }
 
         private void LoadHotkeysUI()
@@ -336,6 +351,7 @@ namespace AnniPlayer.Views
             var targetProp = typeof(HotkeyConfig).GetProperty(propName);
             targetProp?.SetValue(hk, val ?? "");
 
+            SettingsService.Instance.Save();
             LoadHotkeysUI();
         }
 
@@ -590,7 +606,7 @@ namespace AnniPlayer.Views
 
                 _recordingButton = btn;
                 IsRecordingKey = true;
-                btn.Content = I18nService.Instance.CurrentLanguage == "en-US" ? "Press key..." : "请按键盘按键...";
+                btn.Content = I18nService.Instance.CurrentLanguage == "en-US" ? "Press key/mouse..." : "请按键或鼠标键...";
                 btn.Background = (System.Windows.Media.Brush)FindResource("ThemeAccentBrush");
                 btn.Foreground = System.Windows.Media.Brushes.White;
             }
@@ -605,6 +621,82 @@ namespace AnniPlayer.Views
             {
                 btn.Content = FormatDisplayHotkey(GetHotkeyStringFromConfig(propName));
             }
+        }
+
+        public bool RecordMouseButton(System.Windows.Input.MouseButton mouseButton, System.Windows.Input.ModifierKeys modifiers)
+        {
+            if (_recordingButton != null)
+            {
+                string formattedCombo = FormatMouseCombo(mouseButton, modifiers);
+                if (!string.IsNullOrEmpty(formattedCombo))
+                {
+                    string propName = _recordingButton.Tag?.ToString() ?? "";
+                    SetHotkeyConfigValue(propName, formattedCombo);
+
+                    _recordingButton.Content = FormatDisplayHotkey(formattedCombo);
+                    _recordingButton.ClearValue(System.Windows.Controls.Button.BackgroundProperty);
+                    _recordingButton.ClearValue(System.Windows.Controls.Button.ForegroundProperty);
+                    _recordingButton = null;
+                    IsRecordingKey = false;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        protected override void OnPreviewMouseDown(System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (_recordingButton != null)
+            {
+                if (e.ChangedButton == System.Windows.Input.MouseButton.XButton1 ||
+                    e.ChangedButton == System.Windows.Input.MouseButton.XButton2 ||
+                    e.ChangedButton == System.Windows.Input.MouseButton.Middle)
+                {
+                    e.Handled = true;
+                    if (RecordMouseButton(e.ChangedButton, System.Windows.Input.Keyboard.Modifiers))
+                    {
+                        return;
+                    }
+                }
+                else if (e.ChangedButton == System.Windows.Input.MouseButton.Left || e.ChangedButton == System.Windows.Input.MouseButton.Right)
+                {
+                    var clickedSource = e.OriginalSource as DependencyObject;
+                    var clickedBtn = FindVisualParent<System.Windows.Controls.Button>(clickedSource);
+                    if (clickedBtn != _recordingButton)
+                    {
+                        ResetRecordingButton(_recordingButton);
+                        _recordingButton = null;
+                    }
+                }
+            }
+            else if (e.ChangedButton == System.Windows.Input.MouseButton.Right)
+            {
+                var clickedSource = e.OriginalSource as DependencyObject;
+                var clickedBtn = FindVisualParent<System.Windows.Controls.Button>(clickedSource);
+                if (clickedBtn != null && clickedBtn.Tag is string propName && !string.IsNullOrEmpty(propName))
+                {
+                    var prop = typeof(HotkeyConfig).GetProperty(propName);
+                    if (prop != null)
+                    {
+                        e.Handled = true;
+                        SetHotkeyConfigValue(propName, "");
+                        clickedBtn.Content = FormatDisplayHotkey("");
+                        return;
+                    }
+                }
+            }
+
+            base.OnPreviewMouseDown(e);
+        }
+
+        private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
+        {
+            while (child != null)
+            {
+                if (child is T parent) return parent;
+                child = System.Windows.Media.VisualTreeHelper.GetParent(child);
+            }
+            return null;
         }
 
         protected override void OnPreviewKeyDown(System.Windows.Input.KeyEventArgs e)
@@ -630,7 +722,7 @@ namespace AnniPlayer.Views
                 }
 
                 string formattedCombo = FormatKeyCombo(key, System.Windows.Input.Keyboard.Modifiers);
-                _recordingButton.Content = formattedCombo;
+                _recordingButton.Content = FormatDisplayHotkey(formattedCombo);
 
                 string propName = _recordingButton.Tag?.ToString() ?? "";
                 SetHotkeyConfigValue(propName, formattedCombo);
@@ -642,6 +734,25 @@ namespace AnniPlayer.Views
             }
 
             base.OnPreviewKeyDown(e);
+        }
+
+        public static string FormatMouseCombo(System.Windows.Input.MouseButton mouseButton, System.Windows.Input.ModifierKeys modifiers)
+        {
+            string mouseStr = mouseButton switch
+            {
+                System.Windows.Input.MouseButton.XButton1 => "XButton1",
+                System.Windows.Input.MouseButton.XButton2 => "XButton2",
+                System.Windows.Input.MouseButton.Middle => "MiddleButton",
+                _ => ""
+            };
+            if (string.IsNullOrEmpty(mouseStr)) return "";
+
+            string prefix = "";
+            if (modifiers.HasFlag(System.Windows.Input.ModifierKeys.Control)) prefix += "Ctrl+";
+            if (modifiers.HasFlag(System.Windows.Input.ModifierKeys.Shift)) prefix += "Shift+";
+            if (modifiers.HasFlag(System.Windows.Input.ModifierKeys.Alt)) prefix += "Alt+";
+
+            return prefix + mouseStr;
         }
 
         public static string FormatKeyCombo(System.Windows.Input.Key key, System.Windows.Input.ModifierKeys modifiers)

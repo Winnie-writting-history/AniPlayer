@@ -1,4 +1,4 @@
-<UserControl x:Class="AnniPlayer.Views.PlaylistOverlay"
+﻿<UserControl x:Class="AnniPlayer.Views.PlaylistOverlay"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -47,7 +47,8 @@
                                  ScrollViewer.CanContentScroll="True"
                                  VirtualizingStackPanel.IsVirtualizing="True"
                                  VirtualizingStackPanel.VirtualizationMode="Recycling"
-                                 SelectionChanged="LbPlaylists_SelectionChanged" MouseDoubleClick="LbPlaylists_MouseDoubleClick">
+                                 SelectionChanged="LbPlaylists_SelectionChanged" MouseDoubleClick="LbPlaylists_MouseDoubleClick"
+                                 KeyDown="LbPlaylists_KeyDown">
                             <ListBox.ItemContainerStyle>
                                 <Style TargetType="ListBoxItem">
                                     <Setter Property="Foreground" Value="{DynamicResource ThemeTextBrush}"/>
@@ -197,6 +198,7 @@
                                  VirtualizingStackPanel.IsVirtualizing="True"
                                  VirtualizingStackPanel.VirtualizationMode="Recycling"
                                  AllowDrop="True" DragOver="LbEditFiles_DragOver" Drop="EditFiles_Drop"
+                                 KeyDown="LbEditFiles_KeyDown"
                                  PreviewMouseLeftButtonDown="LbEditFiles_PreviewMouseLeftButtonDown"
                                  PreviewMouseMove="LbEditFiles_PreviewMouseMove">
                             <ListBox.ItemTemplate>

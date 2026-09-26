@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -46,6 +46,7 @@ namespace AnniPlayer.Services
         private readonly List<int> _shuffleHistory = new();
         private int _shuffleHistoryIndex = -1;
         private CancellationTokenSource? _bgScanCts;
+        public event Action<PlaylistSortOption>? SortOptionChanged;
 
         public int CurrentIndex
         {
@@ -284,14 +285,20 @@ namespace AnniPlayer.Services
             if (sortMode != -1 && Enum.IsDefined(typeof(PlaylistSortOption), sortMode))
             {
                 var option = (PlaylistSortOption)sortMode;
+                var naturalComparer = new NaturalStringComparer();
                 allFiles = option switch
                 {
-                    PlaylistSortOption.NameAscending => allFiles.OrderBy(f => Path.GetFileName(f), StringComparer.OrdinalIgnoreCase).ToList(),
-                    PlaylistSortOption.NameDescending => allFiles.OrderByDescending(f => Path.GetFileName(f), StringComparer.OrdinalIgnoreCase).ToList(),
+                    PlaylistSortOption.NameAscending => allFiles.OrderBy(f => Path.GetFileName(f), naturalComparer).ToList(),
+                    PlaylistSortOption.NameDescending => allFiles.OrderByDescending(f => Path.GetFileName(f), naturalComparer).ToList(),
                     PlaylistSortOption.DateDescending => allFiles.OrderByDescending(f => GetFileModificationDate(f)).ToList(),
                     PlaylistSortOption.DateAscending => allFiles.OrderBy(f => GetFileModificationDate(f)).ToList(),
                     _ => allFiles
                 };
+                SortOptionChanged?.Invoke(option);
+            }
+            else
+            {
+                SortOptionChanged?.Invoke(PlaylistSortOption.NameAscending);
             }
 
             // Determine target file to play
@@ -677,14 +684,19 @@ namespace AnniPlayer.Services
             SettingsService.Instance.Config.PlaylistSortMode = (int)option;
             SettingsService.Instance.Save();
 
-            if (Items.Count <= 1) return;
+            if (Items.Count <= 1)
+            {
+                SortOptionChanged?.Invoke(option);
+                return;
+            }
 
             var currentItem = GetCurrent();
+            var naturalComparer = new NaturalStringComparer();
 
             List<PlaylistItem> sortedList = option switch
             {
-                PlaylistSortOption.NameAscending => Items.OrderBy(i => i.Title, StringComparer.OrdinalIgnoreCase).ToList(),
-                PlaylistSortOption.NameDescending => Items.OrderByDescending(i => i.Title, StringComparer.OrdinalIgnoreCase).ToList(),
+                PlaylistSortOption.NameAscending => Items.OrderBy(i => i.Title, naturalComparer).ToList(),
+                PlaylistSortOption.NameDescending => Items.OrderByDescending(i => i.Title, naturalComparer).ToList(),
                 PlaylistSortOption.DateDescending => Items.OrderByDescending(i => GetFileModificationDate(i.FilePath)).ToList(),
                 PlaylistSortOption.DateAscending => Items.OrderBy(i => GetFileModificationDate(i.FilePath)).ToList(),
                 _ => Items.ToList()
@@ -707,6 +719,7 @@ namespace AnniPlayer.Services
                 }
             }
             Save();
+            SortOptionChanged?.Invoke(option);
         }
 
         private DateTime GetFileModificationDate(string path)
@@ -825,11 +838,14 @@ namespace AnniPlayer.Services
                 _bgScanCts?.Cancel();
                 ClearInternal(cancelScan: false, deferSave: true);
 
-                AddFilesBatch(files, playImmediatelyFirst: false, deferSave: true);
+                var naturalComparer = new NaturalStringComparer();
+                var sortedFiles = files.OrderBy(f => Path.GetFileName(f), naturalComparer).ToList();
 
-                string fileToPlay = (!string.IsNullOrEmpty(targetFile) && files.Contains(targetFile, StringComparer.OrdinalIgnoreCase))
+                AddFilesBatch(sortedFiles, playImmediatelyFirst: false, deferSave: true);
+
+                string fileToPlay = (!string.IsNullOrEmpty(targetFile) && sortedFiles.Contains(targetFile, StringComparer.OrdinalIgnoreCase))
                     ? targetFile
-                    : files[0];
+                    : sortedFiles[0];
 
                 var currentItem = Items.FirstOrDefault(i => string.Equals(i.FilePath, fileToPlay, StringComparison.OrdinalIgnoreCase));
                 if (currentItem != null)
@@ -841,6 +857,10 @@ namespace AnniPlayer.Services
                 {
                     onPlayTarget?.Invoke(fileToPlay);
                 }
+
+                SettingsService.Instance.Config.PlaylistSortMode = (int)PlaylistSortOption.NameAscending;
+                SettingsService.Instance.Save();
+                SortOptionChanged?.Invoke(PlaylistSortOption.NameAscending);
 
                 Save();
             }
@@ -857,11 +877,14 @@ namespace AnniPlayer.Services
 
                 ClearInternal(cancelScan: false, deferSave: true);
 
-                AddFilesBatch(files, playImmediatelyFirst: false, deferSave: true);
+                var naturalComparer = new NaturalStringComparer();
+                var sortedFiles = files.OrderBy(f => Path.GetFileName(f), naturalComparer).ToList();
 
-                string fileToPlay = (!string.IsNullOrEmpty(targetFile) && files.Contains(targetFile, StringComparer.OrdinalIgnoreCase))
+                AddFilesBatch(sortedFiles, playImmediatelyFirst: false, deferSave: true);
+
+                string fileToPlay = (!string.IsNullOrEmpty(targetFile) && sortedFiles.Contains(targetFile, StringComparer.OrdinalIgnoreCase))
                     ? targetFile
-                    : files[0];
+                    : sortedFiles[0];
 
                 var currentItem = Items.FirstOrDefault(i => string.Equals(i.FilePath, fileToPlay, StringComparison.OrdinalIgnoreCase));
                 if (currentItem != null)
@@ -873,6 +896,10 @@ namespace AnniPlayer.Services
                 {
                     onPlayTarget?.Invoke(fileToPlay);
                 }
+
+                SettingsService.Instance.Config.PlaylistSortMode = (int)PlaylistSortOption.NameAscending;
+                SettingsService.Instance.Save();
+                SortOptionChanged?.Invoke(PlaylistSortOption.NameAscending);
 
                 if (!ct.IsCancellationRequested)
                 {

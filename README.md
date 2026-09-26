@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 <img src="Assets/logo.png" alt="AniPlayer Logo" width="130" height="130" />
 
@@ -103,6 +103,7 @@
 | **`↑` / `↓`** | Volume Up / Down (5%) | Mouse Wheel over Volume Slider |
 | **`F` / `Double Click`** | Toggle Fullscreen | `Ctrl + Enter` |
 | **`M`** | Mute / Unmute | - |
+| **`PageDown` / `PageUp`** | Next / Previous Media | Mouse 5 / Mouse 4 (Forward / Back) |
 | **`=` / `-`** | Speed Up / Down (0.1x) | - |
 | **`Ctrl + O`** | Open File | Drag & Drop File |
 | **`Ctrl + Shift + O`** | Open Folder | Drag & Drop Folder |

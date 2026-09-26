@@ -1,4 +1,4 @@
-{
+﻿{
   "_info": "Ani player 语言包 - 简体中文 (zh-CN)\n修改说明：只需修改右侧的值，不要修改左侧的 key。",
   "LanguageDisplayName": "简体中文 (zh-CN)",
 
@@ -308,6 +308,7 @@
     "SkinLoadErrorMessage": "皮肤「{0}」解析失败，已自动回退至禁用皮肤状态。\n\n具体错误原因：\n{1}",
 
     "LibraryTitle": "媒体库",
+    "LibraryTitleNew": "新建播放列表",
     "LibraryTitleEdit": "修改播放列表",
     "LibraryTitleMerge": "合并播放列表",
     "LibraryVideosCount": "{0} 个媒体文件",
