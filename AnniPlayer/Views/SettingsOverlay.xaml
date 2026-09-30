@@ -1,4 +1,4 @@
-<UserControl x:Class="AnniPlayer.Views.SettingsOverlay"
+﻿<UserControl x:Class="AnniPlayer.Views.SettingsOverlay"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -703,6 +703,15 @@
                                 <TextBlock Text="{Binding Source={x:Static services:I18nService.Instance}, Path=[SettingsThemeDesc]}"
                                            FontSize="13" Foreground="{DynamicResource ThemeSubTextBrush}" Margin="0,0,0,10" TextWrapping="Wrap"/>
                                 <ComboBox x:Name="ComboTheme" Width="380" HorizontalAlignment="Left" Style="{StaticResource ThemeComboBoxStyle}" SelectionChanged="ComboTheme_SelectionChanged"/>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                    <Button x:Name="BtnOpenThemesFolder" Click="BtnOpenThemesFolder_Click"
+                                            Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[SettingsOpenThemesFolder]}"
+                                            Style="{StaticResource ThemeButtonStyle}" FontSize="13" Padding="12,6" Margin="0,0,10,0"/>
+                                    <Button x:Name="BtnRefreshThemes" Click="BtnRefreshThemes_Click"
+                                            Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[SettingsRefreshThemes]}"
+                                            Style="{StaticResource ThemeButtonStyle}" FontSize="13" Padding="12,6" Margin="0,0,0,0"/>
+                                </StackPanel>
                             </StackPanel>
                         </ScrollViewer>
 

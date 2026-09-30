@@ -31,6 +31,12 @@ Write-Host "📂 正在同步皮肤与运行时资产..." -ForegroundColor Yello
 if (Test-Path ".\Demo\skin") {
     Copy-Item -Path ".\Demo\skin" -Destination "$publishDir\skin" -Recurse -Force
 }
+if (Test-Path ".\Demo\themes") {
+    if (-not (Test-Path "$publishDir\themes")) { New-Item -ItemType Directory -Path "$publishDir\themes" -Force | Out-Null }
+    Get-ChildItem -Path ".\Demo\themes" -File | ForEach-Object {
+        Copy-Item -Path $_.FullName -Destination "$publishDir\themes\$($_.Name)" -Force
+    }
+}
 if (Test-Path ".\Demo\autocrop.lua") {
     Copy-Item -Path ".\Demo\autocrop.lua" -Destination "$publishDir\autocrop.lua" -Force
 }

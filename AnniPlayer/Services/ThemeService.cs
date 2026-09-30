@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -60,6 +60,14 @@ namespace AnniPlayer.Services
 
         public List<ThemeGradientStop>? TitleBarGradientStops { get; set; }
         public List<ThemeGradientStop>? ControlBarGradientStops { get; set; }
+
+        // ── 半透水晶磨砂玻璃与高光质感 (Crystal Frosted Glass & Sheen Properties) ──
+        public bool EnableFrostedGlass { get; set; } = false;
+        public string FrostedGlassTopHex { get; set; } = "";
+        public string FrostedGlassBottomHex { get; set; } = "";
+        public string FrostedTitleStartHex { get; set; } = "";
+        public string FrostedCtrlEndHex { get; set; } = "";
+        public bool EnableTopSheen { get; set; } = false;
 
         // ── 尺寸与圆角 (Dimensions, CornerRadius & Borders) ──
         public double ButtonCornerRadius { get; set; } = 6.0;
@@ -363,27 +371,33 @@ namespace AnniPlayer.Services
                 NameEn = "⚡ Tech Cyan",
                 AccentHex = "#00F0FF",
                 TextHex = "#F0F8FF",
-                WindowBgHex = "#06152D",
-                TitleBarStartHex = "#F00F4887",
-                TitleBarEndHex = "#F20A2C5C",
-                ControlBarEndHex = "#F5082147",
-                MenuBgHex = "#0A2548",
-                DrawerBgHex = "#0C2B54",
+                WindowBgHex = "#020B1C",
+                TitleBarStartHex = "#F0043A94",
+                TitleBarEndHex = "#F2032868",
+                ControlBarEndHex = "#F5021A4E",
+                MenuBgHex = "#E6022258",
+                DrawerBgHex = "#E6022054",
                 MenuSeparatorHex = "#6000F0FF", // 60% 赛博电竞青微光刻线
-                BorderHex = "#6000B2FF",
-                ButtonHoverHex = "#28528C",
+                BorderHex = "#600099FF",
+                ButtonHoverHex = "#1E4582",
                 ButtonHoverFgHex = "#FFFFFF",
                 InactiveButtonHex = "#D0E4FF",
                 PrimaryBtnStartHex = "#0072FF",
                 PrimaryBtnEndHex = "#00F2FE",
                 SliderProgressHex = "#00F0FF",
-                SliderTrackHex = "#400D2B52",
-                AudioBannerBgHex = "#3306152D",
+                SliderTrackHex = "#400A2548",
+                AudioBannerBgHex = "#33020B1C",
                 AudioBannerBorderHex = "#A000F0FF",
                 AudioDiscBorderHex = "#8000F0FF",
                 AudioAccentHex = "#00F0FF",
                 AudioTextHex = "#FFFFFF",
-                AudioSubTextHex = "#C0E0FF"
+                AudioSubTextHex = "#C0E0FF",
+                EnableFrostedGlass = true,
+                FrostedGlassTopHex = "#94033282",      // 纯净深邃夜蓝 (RGB 3, 50, 130, 58% 透明度)
+                FrostedGlassBottomHex = "#A802205E",   // 幽邃纯蓝底色 (RGB 2, 32, 94, 66% 透明度)
+                FrostedTitleStartHex = "#94043A94",    // 顶栏清透纯蓝高光 (RGB 4, 58, 148)
+                FrostedCtrlEndHex = "#A8021A4E",       // 底栏深邃纯蓝收尾 (RGB 2, 26, 78)
+                EnableTopSheen = true
             },
             ["lakeblue"] = new ThemeItem
             {
@@ -427,7 +441,13 @@ namespace AnniPlayer.Services
                     new ThemeGradientStop { ColorHex = "#E856ADF4", Offset = 0.30 },
                     new ThemeGradientStop { ColorHex = "#D82A8FD9", Offset = 0.70 },
                     new ThemeGradientStop { ColorHex = "#F560B0F5", Offset = 1.0 }
-                }
+                },
+                EnableFrostedGlass = true,
+                FrostedGlassTopHex = "#9456ADF4",
+                FrostedGlassBottomHex = "#A82A8FD9",
+                FrostedTitleStartHex = "#9460B0F5",
+                FrostedCtrlEndHex = "#A81E7EC6",
+                EnableTopSheen = true
             },
             ["rosegold"] = new ThemeItem
             {
@@ -594,7 +614,13 @@ namespace AnniPlayer.Services
                 AudioDiscBorderHex = "#8000E5FF",
                 AudioAccentHex = "#00E5FF",
                 AudioTextHex = "#FFFFFF",
-                AudioSubTextHex = "#CCCCCC"
+                AudioSubTextHex = "#CCCCCC",
+                EnableFrostedGlass = true,
+                FrostedGlassTopHex = "#941A1A22",
+                FrostedGlassBottomHex = "#A80A0A0E",
+                FrostedTitleStartHex = "#94181820",
+                FrostedCtrlEndHex = "#A806060A",
+                EnableTopSheen = true
             },
             ["emerald"] = new ThemeItem
             {
@@ -623,7 +649,13 @@ namespace AnniPlayer.Services
                 AudioDiscBorderHex = "#9010B981",
                 AudioAccentHex = "#34D399",
                 AudioTextHex = "#FFFFFF",
-                AudioSubTextHex = "#A7F3D0"
+                AudioSubTextHex = "#A7F3D0",
+                EnableFrostedGlass = true,
+                FrostedGlassTopHex = "#94084838",
+                FrostedGlassBottomHex = "#A8042A20",
+                FrostedTitleStartHex = "#940A5442",
+                FrostedCtrlEndHex = "#A802221A",
+                EnableTopSheen = true
             },
             ["violet"] = new ThemeItem
             {
@@ -652,12 +684,19 @@ namespace AnniPlayer.Services
                 AudioDiscBorderHex = "#90A855F7",
                 AudioAccentHex = "#C084FC",
                 AudioTextHex = "#FFFFFF",
-                AudioSubTextHex = "#E9D5FF"
+                AudioSubTextHex = "#E9D5FF",
+                EnableFrostedGlass = true,
+                FrostedGlassTopHex = "#943E086E",
+                FrostedGlassBottomHex = "#A8240442",
+                FrostedTitleStartHex = "#94480A7C",
+                FrostedCtrlEndHex = "#A81C0236",
+                EnableTopSheen = true
             }
         };
 
         private ThemeService()
         {
+            LoadThemesFromDirectory();
             ScanAndLoadCustomSkins();
             LoadConfig();
         }
@@ -1098,9 +1137,32 @@ namespace AnniPlayer.Services
 
         public void ApplyTheme(string key)
         {
+            // If theme file exists on disk, hot-reload that theme item so external edits immediately apply without recompile
+            try
+            {
+                string dir = GetThemesDirectory();
+                string filePath = Path.Combine(dir, $"{key}.json");
+                if (File.Exists(filePath))
+                {
+                    var options = new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true,
+                        ReadCommentHandling = JsonCommentHandling.Skip,
+                        AllowTrailingCommas = true
+                    };
+                    string json = File.ReadAllText(filePath);
+                    var item = JsonSerializer.Deserialize<ThemeItem>(json, options);
+                    if (item != null && !string.IsNullOrWhiteSpace(item.Key))
+                    {
+                        Themes[item.Key] = item;
+                    }
+                }
+            }
+            catch { }
+
             if (!Themes.TryGetValue(key, out var theme))
             {
-                theme = Themes["default"];
+                theme = Themes.ContainsKey("default") ? Themes["default"] : new ThemeItem();
                 key = "default";
             }
 
@@ -1141,48 +1203,57 @@ namespace AnniPlayer.Services
                 UpdateResourceBrush(appResources, "ThemeBorderBrush", borderColor);
 
                 // ══ Menu, Drawer, Panels, TitleBar & ControlBar Crystal Frosted Glass (40% 半透水晶磨砂玻璃与高光质感) ══
-                // 仅对极客电竞青、湖蓝、纯黑OLED、翡翠深林、霓虹极光紫生效；
-                // 玫瑰金典、香槟金典、银色星钻及自定皮肤严格保持原样独立隔离！
-                if (theme.Key is "default" or "lakeblue" or "pureblack" or "emerald" or "violet")
+                // 当主题配置中 EnableFrostedGlass 为 true 时生效；纯色/金属高对比度主题及自定皮肤严格保持原样独立隔离！
+                if (theme.EnableFrostedGlass)
                 {
-                    // 1. 40% 半透水晶磨砂玻璃深邃微渐变 (Alpha 0x94 ~ 58% 至 0xA8 ~ 66%，与蓝宝石 40% 半透明完美对齐)
+                    // 1. 半透水晶磨砂玻璃深邃微渐变 (Alpha 0x94 ~ 58% 至 0xA8 ~ 66%)
                     var frostedGlassBg = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 1) };
                     Color topGlass, bottomGlass, titleStartGlass, ctrlEndGlass;
-                    if (theme.Key == "pureblack")
+
+                    try
                     {
-                        topGlass = Color.FromArgb(0x94, 0x1A, 0x1A, 0x22);
-                        bottomGlass = Color.FromArgb(0xA8, 0x0A, 0x0A, 0x0E);
-                        titleStartGlass = Color.FromArgb(0x94, 0x18, 0x18, 0x20);
-                        ctrlEndGlass = Color.FromArgb(0xA8, 0x06, 0x06, 0x0A);
+                        topGlass = !string.IsNullOrEmpty(theme.FrostedGlassTopHex)
+                            ? (Color)ColorConverter.ConvertFromString(theme.FrostedGlassTopHex)
+                            : Color.FromArgb(0x94, menuBgColor.R, menuBgColor.G, menuBgColor.B);
                     }
-                    else if (theme.Key == "default")
+                    catch
                     {
-                        topGlass = Color.FromArgb(0x94, 0x0E, 0x40, 0x7E);       // 饱满深邃赛博夜蓝 (RGB 14, 64, 126 - 消除灰度，增添深蓝质感)
-                        bottomGlass = Color.FromArgb(0xA8, 0x08, 0x24, 0x4E);    // 幽邃深蓝基底 (RGB 8, 36, 78)
-                        titleStartGlass = Color.FromArgb(0x94, 0x10, 0x48, 0x8C); // 顶栏清透深蓝高光 (RGB 16, 72, 140)
-                        ctrlEndGlass = Color.FromArgb(0xA8, 0x06, 0x1C, 0x40);    // 底栏深邃深蓝收尾 (RGB 6, 28, 64)
+                        topGlass = Color.FromArgb(0x94, menuBgColor.R, menuBgColor.G, menuBgColor.B);
                     }
-                    else if (theme.Key == "lakeblue")
+
+                    try
                     {
-                        topGlass = Color.FromArgb(0x94, 0x56, 0xAD, 0xF4);       // 明亮柔美水波蓝 #56ADF4 (RGB 86, 173, 244)
-                        bottomGlass = Color.FromArgb(0xA8, 0x2A, 0x8F, 0xD9);    // 纯澈中层湖蓝 #2A8FD9 (RGB 42, 143, 217)
-                        titleStartGlass = Color.FromArgb(0x94, 0x60, 0xB0, 0xF5); // 顶部清澈水光蓝 #60B0F5 (RGB 96, 176, 245)
-                        ctrlEndGlass = Color.FromArgb(0xA8, 0x1E, 0x7E, 0xC6);    // 底部深层水影 #1E7EC6 (RGB 30, 126, 198)
+                        bottomGlass = !string.IsNullOrEmpty(theme.FrostedGlassBottomHex)
+                            ? (Color)ColorConverter.ConvertFromString(theme.FrostedGlassBottomHex)
+                            : Color.FromArgb(0xA8, windowBgColor.R, windowBgColor.G, windowBgColor.B);
                     }
-                    else if (theme.Key == "emerald")
+                    catch
                     {
-                        topGlass = Color.FromArgb(0x94, 0x08, 0x48, 0x38);
-                        bottomGlass = Color.FromArgb(0xA8, 0x04, 0x2A, 0x20);
-                        titleStartGlass = Color.FromArgb(0x94, 0x0A, 0x54, 0x42);
-                        ctrlEndGlass = Color.FromArgb(0xA8, 0x02, 0x22, 0x1A);
+                        bottomGlass = Color.FromArgb(0xA8, windowBgColor.R, windowBgColor.G, windowBgColor.B);
                     }
-                    else // violet
+
+                    try
                     {
-                        topGlass = Color.FromArgb(0x94, 0x3E, 0x08, 0x6E);
-                        bottomGlass = Color.FromArgb(0xA8, 0x24, 0x04, 0x42);
-                        titleStartGlass = Color.FromArgb(0x94, 0x48, 0x0A, 0x7C);
-                        ctrlEndGlass = Color.FromArgb(0xA8, 0x1C, 0x02, 0x36);
+                        titleStartGlass = !string.IsNullOrEmpty(theme.FrostedTitleStartHex)
+                            ? (Color)ColorConverter.ConvertFromString(theme.FrostedTitleStartHex)
+                            : topGlass;
                     }
+                    catch
+                    {
+                        titleStartGlass = topGlass;
+                    }
+
+                    try
+                    {
+                        ctrlEndGlass = !string.IsNullOrEmpty(theme.FrostedCtrlEndHex)
+                            ? (Color)ColorConverter.ConvertFromString(theme.FrostedCtrlEndHex)
+                            : bottomGlass;
+                    }
+                    catch
+                    {
+                        ctrlEndGlass = bottomGlass;
+                    }
+
                     frostedGlassBg.GradientStops.Add(new GradientStop(topGlass, 0.0));
                     frostedGlassBg.GradientStops.Add(new GradientStop(bottomGlass, 1.0));
                     frostedGlassBg.Freeze();
@@ -1192,12 +1263,19 @@ namespace AnniPlayer.Services
                     appResources["ThemeWindowBgBrush"] = frostedGlassBg;
 
                     // 2. 顶部水晶磨砂玻璃高光反光 (Top Specular Crystal Sheen Highlight)
-                    var sheenBrush = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 1) };
-                    sheenBrush.GradientStops.Add(new GradientStop(Color.FromArgb(0x60, 255, 255, 255), 0.0));
-                    sheenBrush.GradientStops.Add(new GradientStop(Color.FromArgb(0x28, accentColor.R, accentColor.G, accentColor.B), 0.40));
-                    sheenBrush.GradientStops.Add(new GradientStop(Color.FromArgb(0x00, 0, 0, 0), 1.0));
-                    sheenBrush.Freeze();
-                    appResources["ThemeMenuSheenBrush"] = sheenBrush;
+                    if (theme.EnableTopSheen)
+                    {
+                        var sheenBrush = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 1) };
+                        sheenBrush.GradientStops.Add(new GradientStop(Color.FromArgb(0x60, 255, 255, 255), 0.0));
+                        sheenBrush.GradientStops.Add(new GradientStop(Color.FromArgb(0x28, accentColor.R, accentColor.G, accentColor.B), 0.40));
+                        sheenBrush.GradientStops.Add(new GradientStop(Color.FromArgb(0x00, 0, 0, 0), 1.0));
+                        sheenBrush.Freeze();
+                        appResources["ThemeMenuSheenBrush"] = sheenBrush;
+                    }
+                    else
+                    {
+                        appResources["ThemeMenuSheenBrush"] = System.Windows.Media.Brushes.Transparent;
+                    }
 
                     // 3. 顶部标题栏与底部控制栏水晶半透渐变
                     var titleGradient = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 1) };
@@ -1429,6 +1507,124 @@ namespace AnniPlayer.Services
             }
             catch { }
         }
+
+        #region ══ THEME FILE LOADING & EXPORT API ══
+
+        public string GetThemesDirectory()
+        {
+            var searchDirs = new List<string>
+            {
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "themes"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "themes"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "themes"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "themes"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AniPlayer", "themes")
+            };
+
+            foreach (var d in searchDirs)
+            {
+                if (Directory.Exists(d) && Directory.GetFiles(d, "*.json").Length > 0)
+                {
+                    return Path.GetFullPath(d);
+                }
+            }
+
+            string defaultLocal = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "themes");
+            if (!Directory.Exists(defaultLocal))
+            {
+                try { Directory.CreateDirectory(defaultLocal); } catch { }
+            }
+            return defaultLocal;
+        }
+
+        public void LoadThemesFromDirectory()
+        {
+            try
+            {
+                string dir = GetThemesDirectory();
+                if (!Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
+                var jsonFiles = Directory.GetFiles(dir, "*.json");
+                if (jsonFiles.Length == 0)
+                {
+                    ExportDefaultThemes(dir);
+                    jsonFiles = Directory.GetFiles(dir, "*.json");
+                }
+
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                    ReadCommentHandling = JsonCommentHandling.Skip,
+                    AllowTrailingCommas = true
+                };
+
+                foreach (var file in jsonFiles)
+                {
+                    try
+                    {
+                        string json = File.ReadAllText(file);
+                        var item = JsonSerializer.Deserialize<ThemeItem>(json, options);
+                        if (item != null && !string.IsNullOrWhiteSpace(item.Key))
+                        {
+                            Themes[item.Key] = item;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[ThemeService] Error parsing theme file '{file}': {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ThemeService] LoadThemesFromDirectory failed: {ex.Message}");
+            }
+        }
+
+        public void ExportDefaultThemes(string targetDir)
+        {
+            try
+            {
+                if (!Directory.Exists(targetDir)) Directory.CreateDirectory(targetDir);
+
+                var options = new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                };
+
+                foreach (var kvp in Themes)
+                {
+                    string filePath = Path.Combine(targetDir, $"{kvp.Key}.json");
+                    if (!File.Exists(filePath))
+                    {
+                        string json = JsonSerializer.Serialize(kvp.Value, options);
+                        File.WriteAllText(filePath, json, System.Text.Encoding.UTF8);
+                    }
+                }
+            }
+            catch { }
+        }
+
+        public void OpenThemesFolder()
+        {
+            try
+            {
+                string localDir = GetThemesDirectory();
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = localDir,
+                    UseShellExecute = true
+                });
+            }
+            catch { }
+        }
+
+        #endregion
 
         #region ══ SKIN PACKAGE LOADING & EXPORT API ══
 

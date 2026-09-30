@@ -1,4 +1,4 @@
-param(
+﻿param(
     [switch]$SkipProgramFilesSync
 )
 
@@ -39,6 +39,15 @@ if (-not $SkipProgramFilesSync) {
             if (-not (Test-Path $destLocales)) { New-Item -ItemType Directory -Path $destLocales -Force | Out-Null }
             Get-ChildItem -Path ".\Demo\locales" -File | ForEach-Object {
                 Copy-Item -Path $_.FullName -Destination (Join-Path $destLocales $_.Name) -Force
+            }
+        }
+
+        # Sync themes directory if present in Demo
+        if (Test-Path ".\Demo\themes") {
+            $destThemes = Join-Path $targetDir "themes"
+            if (-not (Test-Path $destThemes)) { New-Item -ItemType Directory -Path $destThemes -Force | Out-Null }
+            Get-ChildItem -Path ".\Demo\themes" -File | ForEach-Object {
+                Copy-Item -Path $_.FullName -Destination (Join-Path $destThemes $_.Name) -Force
             }
         }
 

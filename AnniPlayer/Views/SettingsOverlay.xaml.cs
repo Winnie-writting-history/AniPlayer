@@ -1107,6 +1107,18 @@ namespace AnniPlayer.Views
             RefreshThemeItems();
         }
 
+        private void BtnOpenThemesFolder_Click(object sender, RoutedEventArgs e)
+        {
+            ThemeService.Instance.OpenThemesFolder();
+        }
+
+        private void BtnRefreshThemes_Click(object sender, RoutedEventArgs e)
+        {
+            ThemeService.Instance.LoadThemesFromDirectory();
+            ThemeService.Instance.ApplyActiveSkinOrTheme();
+            RefreshThemeItems();
+        }
+
         private void BtnOpenSysDefaults_Click(object sender, RoutedEventArgs e)
         {
             try
