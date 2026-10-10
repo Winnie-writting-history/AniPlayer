@@ -1,0 +1,141 @@
+﻿{
+  // ============================================================================
+  // 🌌 孔雀石星轨 (Malachite Celestial Dial) 皮肤元数据与样式参数配置表
+  // ============================================================================
+  // 说明 / Notes:
+  // 1. 本文件使用 UTF-8 BOM 编码保存，支持 // 单行注释与 /* */ 多行注释。
+  // 2. 皮肤与系统内置主题严格物理隔离，此处的修改仅针对当前皮肤生效，零全局污染。
+  // 3. 修改后无需重启程序，在设置面板重新点击该皮肤即可毫秒级热重载生效。
+
+  // ── 基础元信息 (Basic Metadata) ──────────────────────────────────────────
+  "key": "malachite",
+  "nameZh": "🌌 孔雀石星轨",
+  "nameEn": "🌌 Malachite Celestial",
+  "author": "Anni Player Team",
+  "version": "1.0.0",
+  "description": "Mystical deep malachite jade with ancient celestial astrolabe dial, aurora ice-cyan highlights, and titanium silver typography",
+
+  // ── 核心调色板 (Core Color Palette) ─────────────────────────────────────
+  // 主题强调色 / 极光冰青电光色 (Accent & Highlight color: Aurora Ice Cyan)
+  "accentHex": "#64FFDA",
+  // 一级主文本与图标前景色 (Primary text & icon foreground: Pure Celestial White)
+  "textHex": "#FFFFFF",
+  // 二级描述文本与时间戳颜色 (Secondary text & timestamp foreground: Titanium Silver Grey)
+  "subTextHex": "#A0C4BF",
+  // 窗口主背景底色 (Window background base color: Deep Abyss Malachite)
+  "windowBgHex": "#051312",
+  // 窗口外边框颜色 (Window outer border color: 1px Aurora Ice Cyan)
+  "borderHex": "#5064FFDA",
+
+  // ── 界面区域与面板配色 (Surface & Panel Color Scheme) ────────────────────
+  // 顶部标题栏垂直渐变起始色 (Top Title Bar gradient start: 100% Solid Opaque)
+  "titleBarStartHex": "#081E1C",
+  // 顶部标题栏垂直渐变结束色 (Top Title Bar gradient end: 100% Solid Opaque)
+  "titleBarEndHex": "#051514",
+  // 底部控制栏垂直渐变起始色 (Bottom Control Bar gradient start: 100% Solid Opaque)
+  "controlBarStartHex": "#051514",
+  // 底部控制栏垂直渐变结束色 (Bottom Control Bar gradient end: 100% Solid Opaque)
+  "controlBarEndHex": "#030C0B",
+  // 右键菜单背景底色 (Context menu background base color: 100% Solid Opaque Abyss Teal)
+  "menuBgHex": "#061615",
+  // 侧边抽屉面板背景底色 (Side drawer panel background base color: 100% Solid Opaque)
+  "drawerBgHex": "#061615",
+  // 浮层面板背景底色 (Popup panel background base color: 100% Solid Opaque)
+  "panelBgHex": "#061615",
+  // 菜单分割线颜色 (Context menu separator divider line color)
+  "menuSeparatorHex": "#2564FFDA",
+
+  // ── 交互控件与按钮状态配色 (Interactive Buttons & Hover States) ───────────
+  // 按钮悬浮时的半透明冰青光晕背景 (Button hover glow background)
+  "buttonHoverHex": "#2064FFDA",
+  // 按钮与菜单项悬浮/高亮时的文本前景色 (Button hover foreground highlight)
+  "buttonHoverFgHex": "#FFFFFF",
+  // 非活跃/禁用按钮颜色 (Inactive / disabled button color)
+  "inactiveButtonHex": "#80A0C4BF",
+  // 主行动按钮 (如确定/保存) 渐变起始色 (Primary button gradient start)
+  "primaryBtnStartHex": "#00796B",
+  // 主行动按钮渐变结束色 (Primary button gradient end)
+  "primaryBtnEndHex": "#64FFDA",
+
+  // ── 进度条与电影级光晕 (Seek Slider & Cinema Flare Beam) ──────────────────
+  // 播放进度条已播部分高亮色 (Seek bar played track progress color)
+  "sliderProgressHex": "#64FFDA",
+  // 播放进度条未播槽底色 (Seek bar unplayed track background color)
+  "sliderTrackHex": "#30062420",
+  // 进度条拖拽滑块 Thumb 颜色 (Seek bar thumb handle color)
+  "sliderThumbHex": "#FFFFFF",
+  // 底部控制栏上方电影级横向极光光斑色 (Horizontal cinema flare bloom color)
+  "flareBeamColor": "#64FFDA",
+
+  // ── 几何圆角与边框粗细 (Geometry & Border Dimensions) ────────────────────
+  // 按钮圆角半径 (Button corner radius in px)
+  "buttonCornerRadius": 6.0,
+  // 浮层面板圆角半径 (Popup panel corner radius in px)
+  "panelCornerRadius": 8.0,
+  // 主窗口外框圆角半径 (Main window corner radius in px)
+  "windowCornerRadius": 10.0,
+  // 窗口外边框粗细 (Window outer border thickness in px)
+  "borderThickness": 1.0,
+  // 按钮边框粗细 (Button border thickness in px)
+  "buttonBorderThickness": 1.0,
+
+  // ── 排版字体与基础字号 (Typography & Font Sizing) ────────────────────────
+  // 全局字体族 (Global font family fallback chain)
+  "fontFamily": "Microsoft YaHei, Segoe UI, sans-serif",
+  // 基础字号 (Base font size in pt)
+  "fontSizeBase": 14.0,
+
+  // ── 背景贴图与母版纹理 (Background Texture Assets) ────────────────────────
+  // 主题 16:9 母版纹理贴图文件名 (Master 16:9 texture backdrop image)
+  "themeBg": "malachite.jpg",
+  // 静态待机开机壁纸文件名 (Static idle opening wallpaper image)
+  "idleBg": "default.jpg",
+  // 面板背景总不透明度 (1.0 纯实体完全不透明，消除半透)
+  "panel_opacity": 1.0,
+  // 面板色调保护层透明度 (0.20 柔和微暗保护层，原汁原味透出孔雀石矿物与星盘纹理)
+  "panel_tint_opacity": 0.20,
+
+  // ── 背景音乐 (BGM Audio Engine) ──────────────────────────────────────────
+  // 专属背景音乐音频文件名 (Exclusive background music audio file)
+  "bgm_audio": "The_Color_of_Rain_(with_Ambiance).mp3",
+  // 背景音乐音量 (0~100) (BGM playback volume 0 to 100)
+  "bgm_volume": 70,
+  // 背景音乐播放倍速 (BGM playback speed rate)
+  "bgm_speed": 1.0,
+  // 背景音乐是否循环播放 (Whether BGM loops continuously)
+  "bgm_loop": true,
+  // 待机停止状态下是否自动起播 BGM (Auto-play BGM when in idle state)
+  "bgm_auto_play_on_idle": true,
+  // 播放常规媒体时是否自动静音暂停 BGM (Auto-pause BGM when user media plays)
+  "bgm_pause_on_media_playback": true,
+
+  // ── 待机动态视频轮播引擎 (Idle Video Carousel Engine) ────────────────────
+  // 待机媒体是否循环 (Whether idle media loops)
+  "idle_media_loop": true,
+  // 静态壁纸幻灯片轮播间隔秒数 (Slideshow interval in seconds for static wallpapers)
+  "idle_slideshow_interval_sec": 5.0,
+  // 幻灯片平滑过渡倍速 (Slideshow motion transition speed)
+  "idle_slideshow_speed": 1.0,
+  // 待机界面视频轮播列表 (配置为空列表以默认显示静态开机壁纸)
+  "idle_videos": [],
+  // 待机视频播放倍速 (0.1 ~ 10.0) (Idle video playback speed)
+  "idle_video_speed": 1.0,
+  // 待机视频画面亮度增益 (-100 ~ 100) (Idle video brightness adjustment)
+  "idle_video_brightness": 0.0,
+  // 待机视频是否列表循环 (Whether idle video playlist loops infinitely)
+  "idle_video_loop": true,
+
+  // ── 待机标语与文字排版 (Idle Screen Hint Overlay Typography) ─────────────
+  // 待机标语字体族 (Idle hint font family)
+  "idle_hint_font_family": "Microsoft YaHei, Segoe UI, sans-serif",
+  // 一级主标题字号 (Idle hint main title font size in pt)
+  "idle_hint_title_size": 24.0,
+  // 二级副标题字号 (Idle hint subtitle font size in pt)
+  "idle_hint_subtitle_size": 15.0,
+  // 一级主标题文本颜色 (Idle hint main title text color - 纯白钻光)
+  "idle_hint_title_hex": "#FFFFFF",
+  // 二级副标题文本颜色 (Idle hint subtitle text color - 极光冰青)
+  "idle_hint_subtitle_hex": "#64FFDA",
+  // 三级说明文本颜色 (Idle hint subtext color - 钛银冰灰)
+  "idle_hint_subtext_hex": "#A0C4BF"
+}

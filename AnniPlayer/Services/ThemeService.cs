@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -403,44 +403,47 @@ namespace AnniPlayer.Services
             {
                 Key = "lakeblue",
                 NameZh = "🌊 湖蓝清澈",
-                NameEn = "🌊 Lake Blue",
-                AccentHex = "#B8E5FF",
+                NameEn = "🌊 Brushed Lake Blue",
+                AccentHex = "#BCE6FF",
                 TextHex = "#FFFFFF",
                 WindowBgHex = "#4FAAF2",
-                TitleBarStartHex = "#E656ADF4",
-                TitleBarEndHex = "#DC3B9CE6",
-                ControlBarEndHex = "#E02A8FD9",
+                TitleBarStartHex = "#7AC4FA",
+                TitleBarEndHex = "#287CCF",
+                ControlBarEndHex = "#185AA4",
                 MenuBgHex = "#3596E2",
                 DrawerBgHex = "#3596E2",
-                MenuSeparatorHex = "#50FFFFFF",
-                BorderHex = "#80B8E5FF",
-                ButtonHoverHex = "#30FFFFFF",
+                MenuSeparatorHex = "#40BCE6FF",
+                BorderHex = "#80BCE6FF",
+                ButtonHoverHex = "#35FFFFFF",
                 ButtonHoverFgHex = "#FFFFFF",
                 InactiveButtonHex = "#FFFFFF",
-                PrimaryBtnStartHex = "#2A8FD9",
-                PrimaryBtnEndHex = "#56ADF4",
-                SliderProgressHex = "#B8E5FF",
+                PrimaryBtnStartHex = "#18569E",
+                PrimaryBtnEndHex = "#429CE8",
+                SliderProgressHex = "#BCE6FF",
                 SliderTrackHex = "#45FFFFFF",
-                AudioBannerBgHex = "#330C2844",
-                AudioBannerBorderHex = "#B056ADF4",
-                AudioDiscBorderHex = "#9056ADF4",
-                AudioAccentHex = "#56ADF4",
+                AudioBannerBgHex = "#380C2848",
+                AudioBannerBorderHex = "#FFBCE6FF",
+                AudioDiscBorderHex = "#D07AC4FA",
+                AudioAccentHex = "#7AC4FA",
                 AudioTextHex = "#FFFFFF",
-                AudioSubTextHex = "#D8ECFF",
+                AudioSubTextHex = "#D8EEFF",
                 TitleBarGradientStops = new List<ThemeGradientStop>
                 {
-                    new ThemeGradientStop { ColorHex = "#F560B0F5", Offset = 0.0 },
-                    new ThemeGradientStop { ColorHex = "#E04FAAF2", Offset = 0.25 },
-                    new ThemeGradientStop { ColorHex = "#E856ADF4", Offset = 0.50 },
-                    new ThemeGradientStop { ColorHex = "#D82A8FD9", Offset = 0.75 },
-                    new ThemeGradientStop { ColorHex = "#E04FAAF2", Offset = 1.0 }
+                    new ThemeGradientStop { ColorHex = "#B0E2FF", Offset = 0.0 },
+                    new ThemeGradientStop { ColorHex = "#4296E4", Offset = 0.18 },
+                    new ThemeGradientStop { ColorHex = "#7AC4FA", Offset = 0.38 },
+                    new ThemeGradientStop { ColorHex = "#144C88", Offset = 0.58 },
+                    new ThemeGradientStop { ColorHex = "#B0E2FF", Offset = 0.78 },
+                    new ThemeGradientStop { ColorHex = "#287CCF", Offset = 1.0 }
                 },
                 ControlBarGradientStops = new List<ThemeGradientStop>
                 {
-                    new ThemeGradientStop { ColorHex = "#E04FAAF2", Offset = 0.0 },
-                    new ThemeGradientStop { ColorHex = "#E856ADF4", Offset = 0.30 },
-                    new ThemeGradientStop { ColorHex = "#D82A8FD9", Offset = 0.70 },
-                    new ThemeGradientStop { ColorHex = "#F560B0F5", Offset = 1.0 }
+                    new ThemeGradientStop { ColorHex = "#358CDD", Offset = 0.0 },
+                    new ThemeGradientStop { ColorHex = "#66B8F8", Offset = 0.18 },
+                    new ThemeGradientStop { ColorHex = "#144C88", Offset = 0.42 },
+                    new ThemeGradientStop { ColorHex = "#BCE6FF", Offset = 0.68 },
+                    new ThemeGradientStop { ColorHex = "#52A6EE", Offset = 0.84 },
+                    new ThemeGradientStop { ColorHex = "#287CCE", Offset = 1.0 }
                 },
                 EnableFrostedGlass = true,
                 FrostedGlassTopHex = "#9456ADF4",
@@ -1277,18 +1280,40 @@ namespace AnniPlayer.Services
                         appResources["ThemeMenuSheenBrush"] = System.Windows.Media.Brushes.Transparent;
                     }
 
-                    // 3. 顶部标题栏与底部控制栏水晶半透渐变
-                    var titleGradient = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 1) };
-                    titleGradient.GradientStops.Add(new GradientStop(titleStartGlass, 0.0));
-                    titleGradient.GradientStops.Add(new GradientStop(topGlass, 1.0));
-                    titleGradient.Freeze();
-                    appResources["ThemeTitleBarBrush"] = titleGradient;
+                    // 3. 顶部标题栏与底部控制栏：优先使用多阶对角高光反光束；若未提供则使用半透磨砂玻璃微渐变
+                    if (theme.TitleBarGradientStops != null && theme.TitleBarGradientStops.Count > 0)
+                    {
+                        var titleGradient = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(1, 0.5) };
+                        foreach (var stop in theme.TitleBarGradientStops)
+                            titleGradient.GradientStops.Add(new GradientStop((Color)ColorConverter.ConvertFromString(stop.ColorHex), stop.Offset));
+                        titleGradient.Freeze();
+                        appResources["ThemeTitleBarBrush"] = titleGradient;
+                    }
+                    else
+                    {
+                        var titleGradient = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 1) };
+                        titleGradient.GradientStops.Add(new GradientStop(titleStartGlass, 0.0));
+                        titleGradient.GradientStops.Add(new GradientStop(topGlass, 1.0));
+                        titleGradient.Freeze();
+                        appResources["ThemeTitleBarBrush"] = titleGradient;
+                    }
 
-                    var controlGradient = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 1) };
-                    controlGradient.GradientStops.Add(new GradientStop(topGlass, 0.0));
-                    controlGradient.GradientStops.Add(new GradientStop(ctrlEndGlass, 1.0));
-                    controlGradient.Freeze();
-                    appResources["ThemeControlBarBrush"] = controlGradient;
+                    if (theme.ControlBarGradientStops != null && theme.ControlBarGradientStops.Count > 0)
+                    {
+                        var controlGradient = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(1, 0.5) };
+                        foreach (var stop in theme.ControlBarGradientStops)
+                            controlGradient.GradientStops.Add(new GradientStop((Color)ColorConverter.ConvertFromString(stop.ColorHex), stop.Offset));
+                        controlGradient.Freeze();
+                        appResources["ThemeControlBarBrush"] = controlGradient;
+                    }
+                    else
+                    {
+                        var controlGradient = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 1) };
+                        controlGradient.GradientStops.Add(new GradientStop(topGlass, 0.0));
+                        controlGradient.GradientStops.Add(new GradientStop(ctrlEndGlass, 1.0));
+                        controlGradient.Freeze();
+                        appResources["ThemeControlBarBrush"] = controlGradient;
+                    }
                 }
                 else
                 {
@@ -1341,7 +1366,7 @@ namespace AnniPlayer.Services
 
                 // SubText
                 Color subTextColor;
-                if (theme.Key is "rosegold" or "champagne" or "silver")
+                if (theme.Key is "rosegold" or "champagne" or "silver" or "lakeblue")
                 {
                     subTextColor = Color.FromArgb(200, textColor.R, textColor.G, textColor.B);
                 }
@@ -1361,7 +1386,7 @@ namespace AnniPlayer.Services
 
                 // Standard Button Background Brush (Semi-transparent frost/dark fill)
                 Color btnBgColor;
-                if (theme.Key is "rosegold" or "champagne" or "silver" or "lakeblue")
+                if (theme.Key is "rosegold" or "champagne" or "silver")
                 {
                     btnBgColor = Color.FromArgb(0x18, 0x00, 0x00, 0x00);
                 }

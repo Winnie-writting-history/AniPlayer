@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.IO.Pipes;
 using System.Runtime.InteropServices;
@@ -59,6 +59,7 @@ namespace AnniPlayer
         private bool _videoPanelIsDraggingWindow = false;
         private bool _ignoreNextPlayPauseClick = false;
         private long _lastActivatedByClickTick = 0;
+        private const int ActivationGuardMs = 200; // Window activation click guard window (compressed from 800ms to 200ms)
         private const int WM_MOUSEACTIVATE = 0x0021;
         
         private bool _isDrawerOpen = false;
@@ -73,6 +74,7 @@ namespace AnniPlayer
         private bool _isTransitioning = false;
         private bool _isCurrentImage = false;
         private string _lastVfString = "";   // cache: skip MPV vf rebuild if unchanged
+        private string _activeRtxVf = "";    // active RTX Video Super Resolution filter string
         private static readonly System.Windows.Media.Brush CyanTransitionBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 229, 255));
         private static readonly System.Windows.Media.Brush GrayTransitionBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(102, 102, 102));
         private System.Windows.Threading.DispatcherTimer? _imageMotionTimer;
@@ -208,7 +210,7 @@ namespace AnniPlayer
 
             _clickTimer = new System.Windows.Threading.DispatcherTimer
             {
-                Interval = TimeSpan.FromMilliseconds(System.Windows.Forms.SystemInformation.DoubleClickTime)
+                Interval = TimeSpan.FromMilliseconds(Math.Min(260, System.Windows.Forms.SystemInformation.DoubleClickTime))
             };
             _clickTimer.Tick += (s, ev) =>
             {
@@ -617,12 +619,6 @@ namespace AnniPlayer
 
             if (msg == 0x001C /* WM_ACTIVATEAPP */ || msg == 0x0006 /* WM_ACTIVATE */)
             {
-                bool isActivating = (msg == 0x001C && wParam != IntPtr.Zero) || (msg == 0x0006 && wParam != IntPtr.Zero);
-                if (isActivating && !_isWindowActive)
-                {
-                    _lastActivatedByClickTick = Environment.TickCount64;
-                }
-
                 if (SettingsService.Instance.Config.AlwaysOnTop || _isPipMode)
                 {
                     Dispatcher.BeginInvoke(new Action(RestoreTopmostState), System.Windows.Threading.DispatcherPriority.Normal);
@@ -1048,11 +1044,17 @@ namespace AnniPlayer
                 if (ev.Button == System.Windows.Forms.MouseButtons.Left)
                 {
                     long now = Environment.TickCount64;
-                    bool activatedRecently = (now - _lastActivatedByClickTick < 800);
-                    bool wasInactive = !_isWindowActive || !this.IsActive || !IsCurrentAppActive() || activatedRecently || _ignoreNextPlayPauseClick;
+                    bool activatedRecently = (_lastActivatedByClickTick > 0 && now - _lastActivatedByClickTick < ActivationGuardMs);
+                    bool isAppActive = _isWindowActive && this.IsActive && IsCurrentAppActive();
+                    bool wasInactive = !isAppActive || activatedRecently;
                     if (wasInactive && SettingsService.Instance.Config.ClickToActivateOnly)
                     {
                         _ignoreNextPlayPauseClick = true;
+                    }
+                    else
+                    {
+                        _ignoreNextPlayPauseClick = false;
+                        _lastActivatedByClickTick = 0;
                     }
 
                     Dispatcher.Invoke(() => EnsureMainCanvasFocusAndDisableIme());
@@ -1104,7 +1106,7 @@ namespace AnniPlayer
                 if (ev.Button == System.Windows.Forms.MouseButtons.Left)
                 {
                     long now = Environment.TickCount64;
-                    bool activatedRecently = (now - _lastActivatedByClickTick < 800);
+                    bool activatedRecently = (_lastActivatedByClickTick > 0 && now - _lastActivatedByClickTick < ActivationGuardMs);
                     if (SettingsService.Instance.Config.ClickToActivateOnly && (_ignoreNextPlayPauseClick || activatedRecently))
                     {
                         _ignoreNextPlayPauseClick = false;
@@ -1112,6 +1114,7 @@ namespace AnniPlayer
                         return; // Consume the click: Window is activated without toggling play/pause!
                     }
                     _ignoreNextPlayPauseClick = false;
+                    _lastActivatedByClickTick = 0;
                     if (_videoPanelIsDraggingWindow)
                     {
                         _videoPanelIsDraggingWindow = false;
@@ -3812,6 +3815,7 @@ namespace AnniPlayer
 
                 if (!enable || isAudioOrNoMediaOrImage)
                 {
+                    _activeRtxVf = "";
                     // Clear enhancement shaders and restoration options
                     MpvSetPropertyString("glsl-shaders", "");
                     MpvSetPropertyString("deband", "no");
@@ -3819,6 +3823,8 @@ namespace AnniPlayer
                     MpvSetPropertyString("cscale", "bilinear");
                     MpvSetPropertyString("scale-antiring", "0");
                     MpvSetPropertyString("sharpen", "0");
+                    UpdateHardwareDecodingMode();
+                    UpdateSmartFill();
                     return;
                 }
 
@@ -3833,59 +3839,147 @@ namespace AnniPlayer
 
                 if (vw <= 0 || vh <= 0)
                 {
+                    _activeRtxVf = "";
                     // No valid video dimensions yet — clear shaders
                     MpvSetPropertyString("glsl-shaders", "");
                     MpvSetPropertyString("deband", "no");
                     MpvSetPropertyString("scale", "bilinear");
                     MpvSetPropertyString("cscale", "bilinear");
                     MpvSetPropertyString("sharpen", "0");
+                    UpdateHardwareDecodingMode();
+                    UpdateSmartFill();
                     return;
                 }
 
-                // Only apply on videos strictly below 720P (< 1280x720 landscape or < 720x1280 portrait)
+                // 画质增强与超分辨率仅针对 720P 以下的低清/标清视频生效 (< 1280x720 横屏 或 < 720x1280 竖屏)
+                // 高清视频 (>= 720P，如 1080P/2K/4K) 自动旁路跳过，保持原生无损画质并节约 GPU 算力与功耗，避免干扰黑边裁剪与滤镜
                 double minDim = Math.Min(vw, vh);
                 double maxDim = Math.Max(vw, vh);
                 bool isBelow720P = (minDim < 720 && maxDim < 1280);
                 if (!isBelow720P)
                 {
-                    // High-res video (>= 720P) — bypass enhancement pipeline to save 100% compute
+                    _activeRtxVf = "";
                     MpvSetPropertyString("glsl-shaders", "");
                     MpvSetPropertyString("deband", "no");
                     MpvSetPropertyString("scale", "bilinear");
                     MpvSetPropertyString("cscale", "bilinear");
                     MpvSetPropertyString("sharpen", "0");
+                    UpdateHardwareDecodingMode();
+                    UpdateSmartFill();
                     return;
                 }
 
-                // 3-layer pipeline for <720P: Deblock + FSRCNNX Lite + AMD CAS
-                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                string fsrcnnxPath = System.IO.Path.Combine(baseDir, "shaders", "FSRCNNX_Lite.glsl").Replace("\\", "/");
-                string casPath = System.IO.Path.Combine(baseDir, "shaders", "CAS.glsl").Replace("\\", "/");
+                string mode = SettingsService.Instance.Config.VideoSharpenMode ?? "shader";
 
-                var shaderList = new List<string>();
-                if (System.IO.File.Exists(fsrcnnxPath)) shaderList.Add(fsrcnnxPath);
-                if (System.IO.File.Exists(casPath)) shaderList.Add(casPath);
-
-                string shadersProp = string.Join(";", shaderList);
-                if (!string.IsNullOrEmpty(shadersProp))
+                // 分支 1: 原本画质增强 (着色器/FFmpeg - FSRCNNX + CAS)
+                if (mode == "shader")
                 {
-                    MpvSetPropertyString("glsl-shaders", shadersProp);
+                    _activeRtxVf = "";
+
+                    // 3-layer pipeline for <720P: Deblock + FSRCNNX Lite + AMD CAS
+                    string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                    string fsrcnnxPath = System.IO.Path.Combine(baseDir, "shaders", "FSRCNNX_Lite.glsl").Replace("\\", "/");
+                    string casPath = System.IO.Path.Combine(baseDir, "shaders", "CAS.glsl").Replace("\\", "/");
+
+                    var shaderList = new List<string>();
+                    if (System.IO.File.Exists(fsrcnnxPath)) shaderList.Add(fsrcnnxPath);
+                    if (System.IO.File.Exists(casPath)) shaderList.Add(casPath);
+
+                    string shadersProp = string.Join(";", shaderList);
+                    if (!string.IsNullOrEmpty(shadersProp))
+                    {
+                        MpvSetPropertyString("glsl-shaders", shadersProp);
+                    }
+                    else
+                    {
+                        MpvSetPropertyString("sharpen", "0.35");
+                    }
+
+                    // Step 1: Deblocking + Debanding (smooth compression artifacts and color banding)
+                    MpvSetPropertyString("deband", "yes");
+                    MpvSetPropertyString("deband-iterations", "1");
+                    MpvSetPropertyString("deband-threshold", "32");
+                    MpvSetPropertyString("deband-range", "16");
+
+                    // Step 2 & 3: High quality anti-ringing lanczos/spline36 scalers
+                    MpvSetPropertyString("scale", "ewa_lanczos");
+                    MpvSetPropertyString("cscale", "spline36");
+                    MpvSetPropertyString("scale-antiring", "0.7");
+
+                    UpdateHardwareDecodingMode();
+                    UpdateSmartFill();
+                    return;
                 }
-                else
+
+                // 分支 2, 3, 4, 5: NVIDIA RTX 硬件视频超分辨率 (VSR 档位 1~4)
+                if (mode == "rtx1" || mode == "rtx2" || mode == "rtx3" || mode == "rtx4")
                 {
-                    MpvSetPropertyString("sharpen", "0.35");
+                    if (!GpuDetectionService.IsRtxVsrSupported)
+                    {
+                        // 显卡不支持 RTX 超分，自动回退到原生着色器模式
+                        SettingsService.Instance.Config.VideoSharpenMode = "shader";
+                        ApplyVideoSharpening(true);
+                        return;
+                    }
+
+                    double upscaleFactor = SettingsService.Instance.Config.VideoSharpenScale;
+                    if (upscaleFactor <= 0) upscaleFactor = 2.0;
+
+                    string scaleStr = upscaleFactor.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    _activeRtxVf = $"d3d11vpp=scale={scaleStr}:scaling-mode=nvidia";
+
+                    if (mode == "rtx1")
+                    {
+                        // 档位 1: 轻量模式 (LOW - 纯粹 Direct3D 11 RTX 张量硬件放大，0 额外着色器开销，功耗与发热极低)
+                        MpvSetPropertyString("glsl-shaders", "");
+                        MpvSetPropertyString("deband", "no");
+                        MpvSetPropertyString("scale", "bilinear");
+                        MpvSetPropertyString("cscale", "bilinear");
+                        MpvSetPropertyString("scale-antiring", "0");
+                        MpvSetPropertyString("sharpen", "0");
+                    }
+                    else if (mode == "rtx2")
+                    {
+                        // 档位 2: 均衡模式 (MEDIUM - 结合样条滤波抗锯齿重采样)
+                        MpvSetPropertyString("glsl-shaders", "");
+                        MpvSetPropertyString("deband", "no");
+                        MpvSetPropertyString("scale", "spline36");
+                        MpvSetPropertyString("cscale", "spline36");
+                        MpvSetPropertyString("scale-antiring", "0.5");
+                        MpvSetPropertyString("sharpen", "0");
+                    }
+                    else if (mode == "rtx3")
+                    {
+                        // 档位 3: 高清模式 (HIGH - 结合 EWA Lanczos 高保真边缘插值重构)
+                        MpvSetPropertyString("glsl-shaders", "");
+                        MpvSetPropertyString("deband", "no");
+                        MpvSetPropertyString("scale", "ewa_lanczos");
+                        MpvSetPropertyString("cscale", "spline36");
+                        MpvSetPropertyString("scale-antiring", "0.7");
+                        MpvSetPropertyString("sharpen", "0");
+                    }
+                    else // rtx4
+                    {
+                        // 档位 4: 极致 ULTRA 模式 (与 batch_upscale.py 对齐 - EWA Lanczos + 色带消除 + CAS 微自适应对比度动态锐化)
+                        MpvSetPropertyString("deband", "yes");
+                        MpvSetPropertyString("deband-iterations", "1");
+                        MpvSetPropertyString("deband-threshold", "32");
+                        MpvSetPropertyString("deband-range", "16");
+                        MpvSetPropertyString("scale", "ewa_lanczos");
+                        MpvSetPropertyString("cscale", "spline36");
+                        MpvSetPropertyString("scale-antiring", "0.8");
+                        MpvSetPropertyString("sharpen", "0");
+
+                        string casPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "shaders", "CAS.glsl").Replace("\\", "/");
+                        if (System.IO.File.Exists(casPath))
+                        {
+                            MpvSetPropertyString("glsl-shaders", casPath);
+                        }
+                    }
+
+                    UpdateHardwareDecodingMode();
+                    UpdateSmartFill();
                 }
-
-                // Step 1: Deblocking + Debanding (smooth compression artifacts and color banding)
-                MpvSetPropertyString("deband", "yes");
-                MpvSetPropertyString("deband-iterations", "1");
-                MpvSetPropertyString("deband-threshold", "32");
-                MpvSetPropertyString("deband-range", "16");
-
-                // Step 2 & 3: High quality anti-ringing lanczos/spline36 scalers
-                MpvSetPropertyString("scale", "ewa_lanczos");
-                MpvSetPropertyString("cscale", "spline36");
-                MpvSetPropertyString("scale-antiring", "0.7");
             }
             catch (Exception ex)
             {
@@ -3893,14 +3987,66 @@ namespace AnniPlayer
             }
         }
 
+        private void VideoSharpenMenuItem_Click(object? sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.MenuItem mi && mi.Tag is string tag)
+            {
+                SetVideoSharpenMode(tag);
+            }
+        }
+
+        public void SetVideoSharpenMode(string mode, bool showOsd = true)
+        {
+            var cfg = SettingsService.Instance.Config;
+            var i18n = I18nService.Instance;
+
+            if (mode == "off")
+            {
+                cfg.VideoSharpening = false;
+                SettingsService.Instance.Save();
+                ApplyVideoSharpening(false);
+                if (showOsd) ShowOsd(i18n["OsdSharpenOff"]);
+                return;
+            }
+
+            if ((mode == "rtx1" || mode == "rtx2" || mode == "rtx3" || mode == "rtx4") && !GpuDetectionService.IsRtxVsrSupported)
+            {
+                if (showOsd) ShowOsd(i18n["TooltipRtxNotSupported"]);
+                mode = "shader";
+            }
+
+            cfg.VideoSharpening = true;
+            cfg.VideoSharpenMode = mode;
+            SettingsService.Instance.Save();
+            ApplyVideoSharpening(true);
+
+            if (showOsd)
+            {
+                string osdText = mode switch
+                {
+                    "rtx1" => i18n["OsdSharpenRtx1On"],
+                    "rtx2" => i18n["OsdSharpenRtx2On"],
+                    "rtx3" => i18n["OsdSharpenRtx3On"],
+                    "rtx4" => i18n["OsdSharpenRtx4On"],
+                    _ => i18n["OsdSharpenShaderOn"]
+                };
+                ShowOsd(osdText);
+            }
+        }
+
         private void MenuVideoSharpen_Click(object? sender, RoutedEventArgs e)
         {
-            bool enable = !SettingsService.Instance.Config.VideoSharpening;
-            SettingsService.Instance.Config.VideoSharpening = enable;
-            SettingsService.Instance.Save();
-            ApplyVideoSharpening(enable);
-            var i18n = I18nService.Instance;
-            ShowOsd(enable ? i18n["OsdSharpenOn"] : i18n["OsdSharpenOff"]);
+            var cfg = SettingsService.Instance.Config;
+            if (cfg.VideoSharpening)
+            {
+                SetVideoSharpenMode("off");
+            }
+            else
+            {
+                string lastMode = cfg.VideoSharpenMode;
+                if (string.IsNullOrEmpty(lastMode)) lastMode = "shader";
+                SetVideoSharpenMode(lastMode);
+            }
         }
 
         public void ApplyAudioNightMode(bool enable, bool showOsd = true)
@@ -5340,10 +5486,13 @@ namespace AnniPlayer
                 return;
             }
 
-            if (_lastHwdec != "auto-copy")
+            // 当开启 RTX 超分辨率且不需要 CPU 虚化填充且未开启黑边裁剪时，优先直通 d3d11va 零拷贝显存表面，以获得最佳渲染与超分性能
+            string targetHwdec = (!string.IsNullOrEmpty(_activeRtxVf) && !_smartFillEnabled && _autoCropMode == "none") ? "d3d11va" : "auto-copy";
+
+            if (_lastHwdec != targetHwdec)
             {
-                _lastHwdec = "auto-copy";
-                MpvSetPropertyString("hwdec", "auto-copy");
+                _lastHwdec = targetHwdec;
+                MpvSetPropertyString("hwdec", targetHwdec);
             }
         }
 
@@ -5469,11 +5618,11 @@ namespace AnniPlayer
 
                 if (!effectiveSmartFill)
                 {
-                    // Only clear vf if it was previously set
-                    if (_lastVfString != "")
+                    string plainTargetVf = (_autoCropMode == "none") ? _activeRtxVf : "";
+                    if (plainTargetVf != _lastVfString)
                     {
-                        _lastVfString = "";
-                        MpvSetPropertyString("vf", "");
+                        _lastVfString = plainTargetVf;
+                        MpvSetPropertyString("vf", plainTargetVf);
                     }
                     if (_autoCropMode != "none" && !string.IsNullOrEmpty(nativeCrop))
                     {
@@ -5610,11 +5759,12 @@ namespace AnniPlayer
                     return;
                 }
 
-                // No fill needed — clear vf only if it was previously set
-                if (_lastVfString != "")
+                // No fill needed — restore active RTX VSR or clear vf
+                string targetVf = (_autoCropMode == "none") ? _activeRtxVf : "";
+                if (targetVf != _lastVfString)
                 {
-                    _lastVfString = "";
-                    MpvSetPropertyString("vf", "");
+                    _lastVfString = targetVf;
+                    MpvSetPropertyString("vf", targetVf);
                 }
             }
             catch (Exception ex)
@@ -6103,7 +6253,49 @@ namespace AnniPlayer
                         }
                         else if (mi.Name == "menuCtxVideoSharpen")
                         {
-                            mi.IsChecked = SettingsService.Instance.Config.VideoSharpening;
+                            bool isSharpenEnabled = SettingsService.Instance.Config.VideoSharpening;
+                            string sMode = SettingsService.Instance.Config.VideoSharpenMode ?? "shader";
+                            bool rtxOk = GpuDetectionService.IsRtxVsrSupported;
+
+                            foreach (var sub in mi.Items)
+                            {
+                                if (sub is System.Windows.Controls.MenuItem subMi)
+                                {
+                                    string tag = subMi.Tag?.ToString() ?? "";
+                                    if (tag == "off")
+                                    {
+                                        subMi.IsChecked = !isSharpenEnabled;
+                                    }
+                                    else if (tag == "shader")
+                                    {
+                                        subMi.IsChecked = isSharpenEnabled && (sMode == "shader");
+                                    }
+                                    else if (tag == "rtx1")
+                                    {
+                                        subMi.IsEnabled = rtxOk;
+                                        subMi.IsChecked = isSharpenEnabled && (sMode == "rtx1");
+                                        subMi.ToolTip = rtxOk ? I18nService.Instance["TooltipRtxL1"] : I18nService.Instance["TooltipRtxNotSupported"];
+                                    }
+                                    else if (tag == "rtx2")
+                                    {
+                                        subMi.IsEnabled = rtxOk;
+                                        subMi.IsChecked = isSharpenEnabled && (sMode == "rtx2");
+                                        subMi.ToolTip = rtxOk ? I18nService.Instance["TooltipRtxL2"] : I18nService.Instance["TooltipRtxNotSupported"];
+                                    }
+                                    else if (tag == "rtx3")
+                                    {
+                                        subMi.IsEnabled = rtxOk;
+                                        subMi.IsChecked = isSharpenEnabled && (sMode == "rtx3");
+                                        subMi.ToolTip = rtxOk ? I18nService.Instance["TooltipRtxL3"] : I18nService.Instance["TooltipRtxNotSupported"];
+                                    }
+                                    else if (tag == "rtx4")
+                                    {
+                                        subMi.IsEnabled = rtxOk;
+                                        subMi.IsChecked = isSharpenEnabled && (sMode == "rtx4");
+                                        subMi.ToolTip = rtxOk ? I18nService.Instance["TooltipRtxL4"] : I18nService.Instance["TooltipRtxNotSupported"];
+                                    }
+                                }
+                            }
                         }
                         else if (mi.Name == "menuCtxSaveStream")
                         {

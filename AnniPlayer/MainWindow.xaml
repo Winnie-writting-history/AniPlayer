@@ -183,7 +183,15 @@
                 <MenuItem x:Name="menuCtxCropPreserve" Header="{Binding [CropPreserve], Source={x:Static i18n:I18nService.Instance}}" Tag="preserve" Click="AutoCropMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
                 <MenuItem x:Name="menuCtxCropAll" Header="{Binding [CropAll], Source={x:Static i18n:I18nService.Instance}}" Tag="crop" Click="AutoCropMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
             </MenuItem>
-            <MenuItem x:Name="menuCtxVideoSharpen" Header="{Binding [MenuVideoSharpen], Source={x:Static i18n:I18nService.Instance}}" Click="MenuVideoSharpen_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+            <MenuItem x:Name="menuCtxVideoSharpen" Header="{Binding [MenuVideoSharpen], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource SmartFillMenuItemStyle}">
+                <MenuItem x:Name="menuCtxSharpenOff" Header="{Binding [SharpenOff], Source={x:Static i18n:I18nService.Instance}}" Tag="off" Click="VideoSharpenMenuItem_Click" IsCheckable="True" IsChecked="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuCtxSharpenShader" Header="{Binding [SharpenShader], Source={x:Static i18n:I18nService.Instance}}" Tag="shader" Click="VideoSharpenMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <Separator Style="{StaticResource SmartFillSeparatorStyle}"/>
+                <MenuItem x:Name="menuCtxSharpenRtx1" Header="{Binding [SharpenRtx1], Source={x:Static i18n:I18nService.Instance}}" Tag="rtx1" Click="VideoSharpenMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuCtxSharpenRtx2" Header="{Binding [SharpenRtx2], Source={x:Static i18n:I18nService.Instance}}" Tag="rtx2" Click="VideoSharpenMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuCtxSharpenRtx3" Header="{Binding [SharpenRtx3], Source={x:Static i18n:I18nService.Instance}}" Tag="rtx3" Click="VideoSharpenMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuCtxSharpenRtx4" Header="{Binding [SharpenRtx4], Source={x:Static i18n:I18nService.Instance}}" Tag="rtx4" Click="VideoSharpenMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+            </MenuItem>
             <MenuItem x:Name="menuAlwaysOnTop" Header="{Binding [MenuAlwaysOnTop], Source={x:Static i18n:I18nService.Instance}}" Click="MenuAlwaysOnTop_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
             <Separator Style="{StaticResource SmartFillSeparatorStyle}"/>
             <MenuItem x:Name="menuCtxSpeed" Header="{Binding [MenuSpeed], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource SmartFillMenuItemStyle}">

@@ -220,6 +220,29 @@ namespace AnniPlayer.Views
                 else RbHwAuto.IsChecked = true;
                 CbClickToActivateOnly.IsChecked = config.ClickToActivateOnly;
                 CbVideoSharpening.IsChecked = config.VideoSharpening;
+                SelectComboTag(ComboVideoSharpenMode, config.VideoSharpenMode ?? "shader");
+
+                bool rtxOk = GpuDetectionService.IsRtxVsrSupported;
+                ItemSharpenRtx1.IsEnabled = rtxOk;
+                ItemSharpenRtx2.IsEnabled = rtxOk;
+                ItemSharpenRtx3.IsEnabled = rtxOk;
+                ItemSharpenRtx4.IsEnabled = rtxOk;
+                if (!rtxOk)
+                {
+                    string notSupportedTip = I18nService.Instance["TooltipRtxNotSupported"];
+                    ItemSharpenRtx1.ToolTip = notSupportedTip;
+                    ItemSharpenRtx2.ToolTip = notSupportedTip;
+                    ItemSharpenRtx3.ToolTip = notSupportedTip;
+                    ItemSharpenRtx4.ToolTip = notSupportedTip;
+                }
+                else
+                {
+                    ItemSharpenRtx1.ToolTip = I18nService.Instance["TooltipRtxL1"];
+                    ItemSharpenRtx2.ToolTip = I18nService.Instance["TooltipRtxL2"];
+                    ItemSharpenRtx3.ToolTip = I18nService.Instance["TooltipRtxL3"];
+                    ItemSharpenRtx4.ToolTip = I18nService.Instance["TooltipRtxL4"];
+                }
+
                 CbAudioNightMode.IsChecked = config.AudioNightMode;
                 SelectComboTag(ComboStreamCache, config.NetworkStreamCacheMode);
 
@@ -535,6 +558,10 @@ namespace AnniPlayer.Views
             config.HwDec = RbHwNo.IsChecked == true ? "no" : "auto";
             config.ClickToActivateOnly = CbClickToActivateOnly.IsChecked == true;
             config.VideoSharpening = CbVideoSharpening.IsChecked == true;
+            if (ComboVideoSharpenMode.SelectedItem is FrameworkElement sharpenItem && sharpenItem.Tag is string sMode)
+            {
+                config.VideoSharpenMode = sMode;
+            }
             config.AudioNightMode = CbAudioNightMode.IsChecked == true;
             if (ComboStreamCache.SelectedItem is FrameworkElement cacheItem && cacheItem.Tag is string cMode)
             {

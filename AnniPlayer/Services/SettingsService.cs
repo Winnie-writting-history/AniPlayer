@@ -59,8 +59,14 @@ namespace AnniPlayer.Services
         // 右键菜单缩放 (1.0 = 100%, 1.25 = 125%, 1.5 = 150%)
         public double ContextMenuScale { get; set; } = 1.0;
 
-        // 低清视频画质锐化增强与抗模糊 (默认关闭)
+        // 低清视频画质锐化增强与超分辨率 (默认关闭)
         public bool VideoSharpening { get; set; } = false;
+
+        // 画质超分辨率模式: "shader" (原本着色器/FFmpeg), "rtx1" (RTX 档位1 轻量), "rtx2" (RTX 档位2 均衡)
+        public string VideoSharpenMode { get; set; } = "shader";
+
+        // 超分辨率放大倍数 (默认 2.0 倍)
+        public double VideoSharpenScale { get; set; } = 2.0;
 
         // 文件关联
         public bool AssociateVideos { get; set; } = false;

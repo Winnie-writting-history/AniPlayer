@@ -1,11 +1,18 @@
-﻿param(
+param(
     [switch]$SkipProgramFilesSync
 )
 
 Stop-Process -Name "AniPlayer" -Force -ErrorAction SilentlyContinue
 Stop-Process -Name "AnniPlayer" -Force -ErrorAction SilentlyContinue
 
-dotnet build .\AnniPlayer\AnniPlayer.csproj -c Release -o .\Demo
+$dotnetCmd = "dotnet"
+if (Test-Path "$env:USERPROFILE\.dotnet\dotnet.exe") {
+    $env:DOTNET_ROOT = "$env:USERPROFILE\.dotnet"
+    $env:PATH = "$env:USERPROFILE\.dotnet;$env:PATH"
+    $dotnetCmd = "$env:USERPROFILE\.dotnet\dotnet.exe"
+}
+
+& $dotnetCmd build .\AnniPlayer\AnniPlayer.csproj -c Release -o .\Demo
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
@@ -51,7 +58,23 @@ if (-not $SkipProgramFilesSync) {
             }
         }
 
-        Write-Host "Sync success: copied runtime to $targetDir (excluded skins and media files)." -ForegroundColor Green
+        # Sync shaders directory if present in Demo
+        if (Test-Path ".\Demo\shaders") {
+            $destShaders = Join-Path $targetDir "shaders"
+            if (-not (Test-Path $destShaders)) { New-Item -ItemType Directory -Path $destShaders -Force | Out-Null }
+            Get-ChildItem -Path ".\Demo\shaders" -File | ForEach-Object {
+                Copy-Item -Path $_.FullName -Destination (Join-Path $destShaders $_.Name) -Force
+            }
+        }
+
+        # Sync skin directory if present in Demo (Demo\skin is base source)
+        if (Test-Path ".\Demo\skin") {
+            $destSkin = Join-Path $targetDir "skin"
+            if (-not (Test-Path $destSkin)) { New-Item -ItemType Directory -Path $destSkin -Force | Out-Null }
+            Copy-Item -Path ".\Demo\skin\*" -Destination $destSkin -Recurse -Force
+        }
+
+        Write-Host "Sync success: copied runtime, themes, shaders, and skins to $targetDir." -ForegroundColor Green
     }
     catch {
         Write-Host "Notice: Skipped sync to $targetDir (Requires Administrator permission)." -ForegroundColor Yellow

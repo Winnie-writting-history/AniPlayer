@@ -1,0 +1,152 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- ============================================================================
+         🌌 孔雀石星轨 (Malachite Celestial Dial) 专属动态样式表 / Dynamic Stylesheet
+         ============================================================================ -->
+    <!-- 说明 / Notes:
+         1. 本文件使用 UTF-8 BOM 编码保存，严格与系统内置主题物理隔离。
+         2. 修改后无需重启程序，在设置面板重新点击该皮肤即可毫秒级热重载生效。 -->
+
+    <!-- ThemeAccentBrush: 极光冰青电光主强调色 / Primary accent color (Aurora Ice Cyan) -->
+    <SolidColorBrush x:Key="ThemeAccentBrush" Color="#64FFDA"/>
+
+    <!-- ThemeTextBrush: 一级主文本与图标前景色 / Primary text & icon foreground (Pure White) -->
+    <SolidColorBrush x:Key="ThemeTextBrush" Color="#FFFFFFFF"/>
+
+    <!-- ThemeSubTextBrush: 二级描述与时间戳文本色 / Secondary description & timestamp text (Titanium Silver) -->
+    <SolidColorBrush x:Key="ThemeSubTextBrush" Color="#CCA0C4BF"/>
+
+    <!-- ThemeBorderBrush: 1px 细致极光冷银边框 / 1px Aurora Ice Cyan border brush -->
+    <SolidColorBrush x:Key="ThemeBorderBrush" Color="#4064FFDA"/>
+
+    <!-- ThemeMenuSeparatorBrush: 菜单细分割线 / Context menu separator divider -->
+    <SolidColorBrush x:Key="ThemeMenuSeparatorBrush" Color="#2864FFDA"/>
+
+    <!-- ThemeButtonHoverBrush: 按钮悬浮半透明冰青光晕 / Button hover semi-transparent aurora glow -->
+    <SolidColorBrush x:Key="ThemeButtonHoverBrush" Color="#2064FFDA"/>
+
+    <!-- ThemeButtonHoverFgBrush: 按钮高亮文本前景色 / Button hover highlight text foreground -->
+    <SolidColorBrush x:Key="ThemeButtonHoverFgBrush" Color="#FFFFFFFF"/>
+
+    <!-- ThemeSelectedItemBgBrush: 列表选中高亮背景 / Playlist selected item highlight background -->
+    <SolidColorBrush x:Key="ThemeSelectedItemBgBrush" Color="#3064FFDA"/>
+
+    <!-- ThemeSliderProgressBrush: 播放进度条已播极光流光色 / Seek slider played progress track (Aurora Cyan) -->
+    <SolidColorBrush x:Key="ThemeSliderProgressBrush" Color="#64FFDA"/>
+
+    <!-- ThemeSliderTrackBrush: 播放进度条未播底槽色 / Seek slider unplayed track background (Deep Abyss Jade) -->
+    <SolidColorBrush x:Key="ThemeSliderTrackBrush" Color="#30062420"/>
+
+    <!-- ThemePrimaryBtnBrush: 主要操作按钮极光渐变 / Primary button aurora linear gradient -->
+    <LinearGradientBrush x:Key="ThemePrimaryBtnBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#00796B" Offset="0.0"/>
+        <GradientStop Color="#00BFA5" Offset="0.5"/>
+        <GradientStop Color="#64FFDA" Offset="1.0"/>
+    </LinearGradientBrush>
+
+
+
+    <!-- ThemeFlareBeamBrush: 底部控制栏横向极光光斑 / Horizontal cinema aurora flare beam bloom -->
+    <LinearGradientBrush x:Key="ThemeFlareBeamBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#00000000" Offset="0.0"/>
+        <GradientStop Color="#6064FFDA" Offset="0.15"/>
+        <GradientStop Color="#FFFFFFFF" Offset="0.5"/>
+        <GradientStop Color="#6064FFDA" Offset="0.85"/>
+        <GradientStop Color="#00000000" Offset="1.0"/>
+    </LinearGradientBrush>
+
+    <!-- ══ 打开文件 3D 质感专属画刷 / Malachite 3D Open Button Brushes ══ -->
+    <!-- ThemeOpenBtnBgBrush: 打开文件按钮背景立体渐变 / Open button 3D depth background gradient -->
+    <LinearGradientBrush x:Key="ThemeOpenBtnBgBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#40082E28" Offset="0.0"/>
+        <GradientStop Color="#60041C18" Offset="1.0"/>
+    </LinearGradientBrush>
+    <!-- ThemeOpenBtnBorderBrush: 打开文件按钮双色高光边框 / Open button dual-tone border -->
+    <LinearGradientBrush x:Key="ThemeOpenBtnBorderBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#B064FFDA" Offset="0.0"/>
+        <GradientStop Color="#5064FFDA" Offset="1.0"/>
+    </LinearGradientBrush>
+    <!-- ThemeOpenBtnSheenBrush: 打开文件按钮顶部高光反射层 / Open button frosted glass sheen highlight -->
+    <LinearGradientBrush x:Key="ThemeOpenBtnSheenBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#70FFFFFF" Offset="0.0"/>
+        <GradientStop Color="#2564FFDA" Offset="0.5"/>
+        <GradientStop Color="#00000000" Offset="1.0"/>
+    </LinearGradientBrush>
+    <!-- ThemeOpenBtnHoverBgBrush: 打开文件按钮悬停背景渐变 / Open button hover background gradient -->
+    <LinearGradientBrush x:Key="ThemeOpenBtnHoverBgBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#4064FFDA" Offset="0.0"/>
+        <GradientStop Color="#1564FFDA" Offset="1.0"/>
+    </LinearGradientBrush>
+    <!-- ThemeOpenBtnGlowColor: 打开文件按钮外发光色 / Open button outer glow color -->
+    <Color x:Key="ThemeOpenBtnGlowColor">#64FFDA</Color>
+
+    <!-- ══ 几何与尺寸 / Geometry & Dimensions ══ -->
+    <!-- ThemeButtonCornerRadius: 按钮圆角半径 / Button corner radius in px -->
+    <CornerRadius x:Key="ThemeButtonCornerRadius">6</CornerRadius>
+    <!-- ThemePanelCornerRadius: 浮层面板圆角半径 / Popup panel corner radius in px -->
+    <CornerRadius x:Key="ThemePanelCornerRadius">8</CornerRadius>
+    <!-- ThemeWindowCornerRadius: 主窗口外框圆角半径 / Main window corner radius in px -->
+    <CornerRadius x:Key="ThemeWindowCornerRadius">10</CornerRadius>
+    <!-- ThemeBorderThickness: 窗口与面板外边框粗细 / Window & panel outer border thickness in px -->
+    <Thickness x:Key="ThemeBorderThickness">1</Thickness>
+    <!-- ThemeButtonBorderThickness: 按钮边框粗细 / Button border thickness in px -->
+    <Thickness x:Key="ThemeButtonBorderThickness">1</Thickness>
+
+    <!-- ══ 待机视频与渲染参数 / Idle Video & Rendering Parameters ══ -->
+    <!-- ThemeIdleVideoSpeed: 待机视频播放倍速 / Idle video playback speed (0.1 ~ 10.0) -->
+    <sys:Double x:Key="ThemeIdleVideoSpeed">1.0</sys:Double>
+    <!-- ThemeIdleVideoBrightness: 待机视频画面亮度增益 / Idle video brightness (-100 ~ 100) -->
+    <sys:Double x:Key="ThemeIdleVideoBrightness">0.0</sys:Double>
+    <!-- ThemeIdleVideoLoop: 待机视频是否循环 / Whether idle video loops -->
+    <sys:Boolean x:Key="ThemeIdleVideoLoop">True</sys:Boolean>
+    <!-- ThemePanelOpacity: 面板与界面总不透明度 (1.0 纯实体完全不透明，消除半透) -->
+    <sys:Double x:Key="ThemePanelOpacity">1.0</sys:Double>
+    <!-- ThemePanelTintOpacity: 复合材质半透明压暗遮罩透明度 / Composite material tint opacity (0.20 柔和微暗，原汁原味透出孔雀石矿物纹理) -->
+    <sys:Double x:Key="ThemePanelTintOpacity">0.20</sys:Double>
+
+    <!-- ══ 播放控制栏按钮控件模板与样式 / Transport Control Button Template & Styles ══ -->
+    <Style x:Key="TransportBtn" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="4"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="btnBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{DynamicResource ThemeButtonCornerRadius}"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- 悬停态: 极光光晕背景与极光细边框 / Hover: Aurora glow background & cyan border -->
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="btnBorder" Property="Background" Value="{DynamicResource ThemeButtonHoverBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource ThemeButtonHoverFgBrush}"/>
+                            <Setter TargetName="btnBorder" Property="BorderBrush" Value="#4064FFDA"/>
+                        </Trigger>
+                        <!-- 按下态 / Pressed State -->
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="btnBorder" Property="Background" Value="#4064FFDA"/>
+                            <Setter Property="Foreground" Value="#FFFFFFFF"/>
+                        </Trigger>
+                        <!-- 禁用态 / Disabled State -->
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.35"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>

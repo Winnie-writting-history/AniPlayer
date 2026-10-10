@@ -568,6 +568,16 @@
                                 <CheckBox x:Name="CbVideoSharpening" Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[SettingsVideoSharpening]}"
                                           FontSize="16" Foreground="{DynamicResource ThemeTextBrush}" Margin="0,6"/>
 
+                                <StackPanel x:Name="PanelSharpenMode" Margin="24,2,0,8">
+                                    <ComboBox x:Name="ComboVideoSharpenMode" Width="436" HorizontalAlignment="Left" Style="{StaticResource ThemeComboBoxStyle}" Height="36">
+                                        <ComboBoxItem x:Name="ItemSharpenShader" Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[SharpenShader]}" Tag="shader"/>
+                                        <ComboBoxItem x:Name="ItemSharpenRtx1" Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[SharpenRtx1]}" Tag="rtx1"/>
+                                        <ComboBoxItem x:Name="ItemSharpenRtx2" Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[SharpenRtx2]}" Tag="rtx2"/>
+                                        <ComboBoxItem x:Name="ItemSharpenRtx3" Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[SharpenRtx3]}" Tag="rtx3"/>
+                                        <ComboBoxItem x:Name="ItemSharpenRtx4" Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[SharpenRtx4]}" Tag="rtx4"/>
+                                    </ComboBox>
+                                </StackPanel>
+
                                 <CheckBox x:Name="CbAudioNightMode" Content="{Binding Source={x:Static services:I18nService.Instance}, Path=[SettingsAudioNightMode]}"
                                           FontSize="16" Foreground="{DynamicResource ThemeTextBrush}" Margin="0,6"/>
 
