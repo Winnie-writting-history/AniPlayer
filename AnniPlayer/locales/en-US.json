@@ -1,4 +1,4 @@
-﻿{
+{
   "_info": "Ani player Language Pack - English (en-US)\nNote: Only modify the values on the right. Do not change the keys on the left.",
   "LanguageDisplayName": "English (en-US)",
 
@@ -26,6 +26,9 @@
     "OsdAutoCropOff": "Auto Crop: Off",
     "OsdAutoCropPreserve": "Auto Crop: Keep Bottom Border (Subtitles)",
     "OsdAutoCropAll": "Auto Crop: Crop All Borders",
+    "OsdAutoCropDetecting": "Auto Crop: Analyzing current frame...",
+    "OsdAutoCropSuccess": "Auto Crop: Current frame analyzed (Applied)",
+    "OsdAutoCropNone": "Auto Crop: No black borders detected (Full Frame)",
     "OsdSmartFillOn": "Ambient Blur Fill: On (Normal)",
     "OsdSmartFillNormal": "Ambient Blur Fill: On (Normal)",
     "OsdSmartFillFeather": "Ambient Blur Fill: Edge Feathered",
@@ -131,7 +134,8 @@
       "_note": "Auto Crop menu items",
       "CropOff": "Turn Off Auto Crop (Off)",
       "CropPreserve": "Keep Bottom Border (Subtitles)",
-      "CropAll": "Crop All Borders"
+      "CropAll": "Crop All Borders",
+      "CropRedetect": "⚡ Re-detect Black Bars (Current Frame)  [Shift+X]"
     },
 
     "Sort": {

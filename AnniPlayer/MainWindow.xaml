@@ -1,4 +1,4 @@
-﻿<Window x:Class="AnniPlayer.MainWindow"
+<Window x:Class="AnniPlayer.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -182,6 +182,8 @@
                 <MenuItem x:Name="menuCtxCropNone" Header="{Binding [CropOff], Source={x:Static i18n:I18nService.Instance}}" Tag="none" Click="AutoCropMenuItem_Click" IsCheckable="True" IsChecked="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
                 <MenuItem x:Name="menuCtxCropPreserve" Header="{Binding [CropPreserve], Source={x:Static i18n:I18nService.Instance}}" Tag="preserve" Click="AutoCropMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
                 <MenuItem x:Name="menuCtxCropAll" Header="{Binding [CropAll], Source={x:Static i18n:I18nService.Instance}}" Tag="crop" Click="AutoCropMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <Separator Style="{StaticResource SmartFillSeparatorStyle}"/>
+                <MenuItem x:Name="menuCtxCropRedetect" Header="{Binding [CropRedetect], Source={x:Static i18n:I18nService.Instance}}" Click="AutoCropRedetect_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
             </MenuItem>
             <MenuItem x:Name="menuCtxVideoSharpen" Header="{Binding [MenuVideoSharpen], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource SmartFillMenuItemStyle}">
                 <MenuItem x:Name="menuCtxSharpenOff" Header="{Binding [SharpenOff], Source={x:Static i18n:I18nService.Instance}}" Tag="off" Click="VideoSharpenMenuItem_Click" IsCheckable="True" IsChecked="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
@@ -195,14 +197,14 @@
             <MenuItem x:Name="menuAlwaysOnTop" Header="{Binding [MenuAlwaysOnTop], Source={x:Static i18n:I18nService.Instance}}" Click="MenuAlwaysOnTop_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
             <Separator Style="{StaticResource SmartFillSeparatorStyle}"/>
             <MenuItem x:Name="menuCtxSpeed" Header="{Binding [MenuSpeed], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource SmartFillMenuItemStyle}">
-                <MenuItem x:Name="menuSpeed025" Header="0.25x" Tag="0.25" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
-                <MenuItem x:Name="menuSpeed05" Header="0.5x" Tag="0.5" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
-                <MenuItem x:Name="menuSpeed075" Header="0.75x" Tag="0.75" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
-                <MenuItem x:Name="menuSpeed1" Header="1.0x (Normal)" Tag="1.0" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
-                <MenuItem x:Name="menuSpeed125" Header="1.25x" Tag="1.25" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
-                <MenuItem x:Name="menuSpeed15" Header="1.5x" Tag="1.5" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
-                <MenuItem x:Name="menuSpeed2" Header="2.0x" Tag="2.0" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
-                <MenuItem x:Name="menuSpeed3" Header="3.0x" Tag="3.0" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuSpeed025" Header="0.25x" Tag="0.25" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuSpeed05" Header="0.5x" Tag="0.5" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuSpeed075" Header="0.75x" Tag="0.75" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuSpeed1" Header="1.0x (Normal)" Tag="1.0" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuSpeed125" Header="1.25x" Tag="1.25" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuSpeed15" Header="1.5x" Tag="1.5" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuSpeed2" Header="2.0x" Tag="2.0" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                <MenuItem x:Name="menuSpeed3" Header="3.0x" Tag="3.0" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
             </MenuItem>
             <MenuItem x:Name="menuAspectRatio" Header="{Binding [AspectRatioHeader], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource SmartFillMenuItemStyle}">
                 <MenuItem x:Name="menuAspectDefault" Header="{Binding [AspectDefault], Source={x:Static i18n:I18nService.Instance}}" Tag="default" Click="AspectRatioMenuItem_Click" IsCheckable="True" IsChecked="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
@@ -709,15 +711,15 @@
                         <Button x:Name="btnScreenshot" Content="&#xE722;" ToolTip="{Binding [TooltipScreenshot], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" Click="BtnScreenshot_Click" Margin="0,0,10,0"/>
                         <Button x:Name="btnSpeed" Content="1.0x" ToolTip="{Binding [TooltipSpeed], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" Width="62" Height="42" FontFamily="Consolas, Segoe UI, Microsoft YaHei, sans-serif" Click="BtnSpeed_Click" FontSize="17" FontWeight="Bold" Margin="0,0,10,0">
                             <Button.ContextMenu>
-                                <ContextMenu Style="{StaticResource SmartFillContextMenuStyle}">
-                                    <MenuItem Header="0.25x" Tag="0.25" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
-                                    <MenuItem Header="0.5x" Tag="0.5" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
-                                    <MenuItem Header="0.75x" Tag="0.75" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
-                                    <MenuItem Header="1.0x (Normal)" Tag="1.0" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
-                                    <MenuItem Header="1.25x" Tag="1.25" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
-                                    <MenuItem Header="1.5x" Tag="1.5" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
-                                    <MenuItem Header="2.0x" Tag="2.0" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
-                                    <MenuItem Header="3.0x" Tag="3.0" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                <ContextMenu Style="{StaticResource SmartFillContextMenuStyle}" Opened="SpeedContextMenu_Opened">
+                                    <MenuItem Header="0.25x" Tag="0.25" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                    <MenuItem Header="0.5x" Tag="0.5" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                    <MenuItem Header="0.75x" Tag="0.75" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                    <MenuItem Header="1.0x (Normal)" Tag="1.0" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                    <MenuItem Header="1.25x" Tag="1.25" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                    <MenuItem Header="1.5x" Tag="1.5" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                    <MenuItem Header="2.0x" Tag="2.0" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                    <MenuItem Header="3.0x" Tag="3.0" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
                                 </ContextMenu>
                             </Button.ContextMenu>
                         </Button>
@@ -737,6 +739,8 @@
                                     <MenuItem x:Name="menuCropNone" Header="{Binding [CropOff], Source={x:Static i18n:I18nService.Instance}}" Tag="none" Click="AutoCropMenuItem_Click" IsCheckable="True" IsChecked="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
                                     <MenuItem x:Name="menuCropPreserve" Header="{Binding [CropPreserve], Source={x:Static i18n:I18nService.Instance}}" Tag="preserve" Click="AutoCropMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
                                     <MenuItem x:Name="menuCropAll" Header="{Binding [CropAll], Source={x:Static i18n:I18nService.Instance}}" Tag="crop" Click="AutoCropMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                    <Separator Style="{StaticResource SmartFillSeparatorStyle}"/>
+                                    <MenuItem x:Name="menuCropRedetect" Header="{Binding [CropRedetect], Source={x:Static i18n:I18nService.Instance}}" Click="AutoCropRedetect_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
                                 </ContextMenu>
                             </Button.ContextMenu>
                         </Button>
@@ -1081,15 +1085,15 @@
                     <Button x:Name="btnScreenshotFS" Content="&#xE722;" ToolTip="{Binding [TooltipScreenshot], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" Click="BtnScreenshot_Click" Margin="0,0,10,0"/>
                     <Button x:Name="btnSpeedFS" Content="1.0x" ToolTip="{Binding [TooltipSpeed], Source={x:Static i18n:I18nService.Instance}}" Style="{StaticResource TransportBtn}" Width="62" Height="42" FontFamily="Consolas, Segoe UI, Microsoft YaHei, sans-serif" Click="BtnSpeed_Click" FontSize="17" FontWeight="Bold" Margin="0,0,10,0">
                         <Button.ContextMenu>
-                            <ContextMenu Style="{StaticResource SmartFillContextMenuStyle}">
-                                <MenuItem Header="0.25x" Tag="0.25" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
-                                <MenuItem Header="0.5x" Tag="0.5" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
-                                <MenuItem Header="0.75x" Tag="0.75" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
-                                <MenuItem Header="1.0x (Normal)" Tag="1.0" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
-                                <MenuItem Header="1.25x" Tag="1.25" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
-                                <MenuItem Header="1.5x" Tag="1.5" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
-                                <MenuItem Header="2.0x" Tag="2.0" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
-                                <MenuItem Header="3.0x" Tag="3.0" Click="SpeedMenuItem_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                            <ContextMenu Style="{StaticResource SmartFillContextMenuStyle}" Opened="SpeedContextMenu_Opened">
+                                <MenuItem Header="0.25x" Tag="0.25" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                <MenuItem Header="0.5x" Tag="0.5" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                <MenuItem Header="0.75x" Tag="0.75" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                <MenuItem Header="1.0x (Normal)" Tag="1.0" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                <MenuItem Header="1.25x" Tag="1.25" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                <MenuItem Header="1.5x" Tag="1.5" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                <MenuItem Header="2.0x" Tag="2.0" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                <MenuItem Header="3.0x" Tag="3.0" Click="SpeedMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
                             </ContextMenu>
                         </Button.ContextMenu>
                     </Button>
@@ -1110,6 +1114,8 @@
                                 <MenuItem x:Name="menuCropNoneFS" Header="{Binding [CropOff], Source={x:Static i18n:I18nService.Instance}}" Tag="none" Click="AutoCropMenuItem_Click" IsCheckable="True" IsChecked="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
                                 <MenuItem x:Name="menuCropPreserveFS" Header="{Binding [CropPreserve], Source={x:Static i18n:I18nService.Instance}}" Tag="preserve" Click="AutoCropMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
                                 <MenuItem x:Name="menuCropAllFS" Header="{Binding [CropAll], Source={x:Static i18n:I18nService.Instance}}" Tag="crop" Click="AutoCropMenuItem_Click" IsCheckable="True" Style="{StaticResource SmartFillMenuItemStyle}"/>
+                                <Separator Style="{StaticResource SmartFillSeparatorStyle}"/>
+                                <MenuItem x:Name="menuCropRedetectFS" Header="{Binding [CropRedetect], Source={x:Static i18n:I18nService.Instance}}" Click="AutoCropRedetect_Click" Style="{StaticResource SmartFillMenuItemStyle}"/>
                             </ContextMenu>
                         </Button.ContextMenu>
                     </Button>

@@ -1,4 +1,4 @@
-﻿{
+{
   "_info": "Ani player 语言包 - 简体中文 (zh-CN)\n修改说明：只需修改右侧的值，不要修改左侧的 key。",
   "LanguageDisplayName": "简体中文 (zh-CN)",
 
@@ -26,6 +26,9 @@
     "OsdAutoCropOff": "智能去黑边: 关",
     "OsdAutoCropPreserve": "智能去黑边: 保留底部黑边 (字幕)",
     "OsdAutoCropAll": "智能去黑边: 去除一切黑边",
+    "OsdAutoCropDetecting": "智能去黑边: 正在分析当前画面重新运算...",
+    "OsdAutoCropSuccess": "智能去黑边: 当前画面检测完成 (已应用)",
+    "OsdAutoCropNone": "智能去黑边: 未检测到黑边 (全屏满格)",
     "OsdSmartFillOn": "虚化填充背景: 常规开启",
     "OsdSmartFillNormal": "虚化填充背景: 常规开启",
     "OsdSmartFillFeather": "虚化填充背景: 边缘羽化 (融边)",
@@ -131,7 +134,8 @@
       "_note": "智能去黑边菜单项",
       "CropOff": "关闭去黑边 (关)",
       "CropPreserve": "保留底部黑边 (字幕)",
-      "CropAll": "去除一切黑边"
+      "CropAll": "去除一切黑边",
+      "CropRedetect": "⚡ 重新运算黑边 (当前画面)  [Shift+X]"
     },
 
     "Sort": {

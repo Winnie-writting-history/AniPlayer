@@ -27,7 +27,7 @@ namespace AnniPlayer
     {
         // ── MPV state ──────────────────────────────────────────────────────
         private IntPtr _mpv;
-        private System.Windows.Forms.Panel _videoPanel = null!;
+        private DoubleBufferedPanel _videoPanel = null!;
         private System.Windows.Threading.DispatcherTimer _timer = null!;
         private System.Windows.Threading.DispatcherTimer _mousePollTimer = null!;
         private System.Windows.Threading.DispatcherTimer _clickTimer = null!;
@@ -70,6 +70,18 @@ namespace AnniPlayer
         private string _smartFillMode = "none";
         private bool _smartFillEnabled { get => _smartFillMode != "none"; set => _smartFillMode = value ? (_smartFillMode == "none" ? "normal" : _smartFillMode) : "none"; }
         private string _autoCropMode = "none";
+        // ── Auto Crop & Smart Fill Unified Two-Stage Pipeline State ──
+        private bool _hasValidDetectedCrop = false;
+        private int _detectedRawCropW = 0;
+        private int _detectedRawCropH = 0;
+        private int _detectedRawCropX = 0;
+        private int _detectedRawCropY = 0;
+        private string _cachedCropFilePath = "";
+        private bool _cropDetectionDoneForCurrentFile = false;
+        private bool _isAutoCropDetecting = false;
+        private System.Windows.Threading.DispatcherTimer? _autoCropDetectPollTimer;
+        private int _autoCropPollCount = 0;
+        private string _cachedSmartFillNativeCrop = "";
         private System.Drawing.Size _lastVideoPanelSize;
         private bool _isTransitioning = false;
         private bool _isCurrentImage = false;
@@ -460,10 +472,17 @@ namespace AnniPlayer
             if (double.TryParse(loopB, System.Globalization.CultureInfo.InvariantCulture, out double valB) && valB >= 0)
                 posB = valB;
 
-            if (posA >= 0 && posB > posA)
+            if (posA >= 0 && posB >= 0 && Math.Abs(posA - posB) > 0.05)
+            {
+                _abLoopA = Math.Min(posA, posB);
+                _abLoopB = Math.Max(posA, posB);
+                posA = _abLoopA;
+                posB = _abLoopB;
+            }
+            else if (posA >= 0 && posB < 0)
             {
                 _abLoopA = posA;
-                _abLoopB = posB;
+                _abLoopB = -1;
             }
 
             DrawAbDotOnCanvas(canvasAbMarkers, posA, dur, "#00F0FF", "A");
@@ -619,6 +638,17 @@ namespace AnniPlayer
 
             if (msg == 0x001C /* WM_ACTIVATEAPP */ || msg == 0x0006 /* WM_ACTIVATE */)
             {
+                bool isActivating = (msg == 0x001C && wParam != IntPtr.Zero) || 
+                                    (msg == 0x0006 && (wParam.ToInt64() & 0xFFFF) != 0);
+                if (isActivating && (!_isWindowActive || !this.IsActive || !IsCurrentAppActive()))
+                {
+                    _lastActivatedByClickTick = Environment.TickCount64;
+                    if (SettingsService.Instance.Config.ClickToActivateOnly)
+                    {
+                        _ignoreNextPlayPauseClick = true;
+                    }
+                }
+
                 if (SettingsService.Instance.Config.AlwaysOnTop || _isPipMode)
                 {
                     Dispatcher.BeginInvoke(new Action(RestoreTopmostState), System.Windows.Threading.DispatcherPriority.Normal);
@@ -839,6 +869,17 @@ namespace AnniPlayer
                 BackColor  = System.Drawing.Color.FromArgb(22, 32, 50),
                 Dock       = System.Windows.Forms.DockStyle.Fill,
                 AllowDrop  = true
+            };
+            _videoPanel.MouseActivateDetected += () =>
+            {
+                if (!_isWindowActive || !this.IsActive || !IsCurrentAppActive())
+                {
+                    _lastActivatedByClickTick = Environment.TickCount64;
+                    if (SettingsService.Instance.Config.ClickToActivateOnly)
+                    {
+                        _ignoreNextPlayPauseClick = true;
+                    }
+                }
             };
             _videoPanel.Paint     += VideoPanel_Paint;
             _videoPanel.Resize    += (s, ev) => { if (!_isTogglingFullscreen && !_isDraggingSize) UpdateSmartFill(); };
@@ -1215,6 +1256,8 @@ namespace AnniPlayer
             this.Deactivated += (s, e) =>
             {
                 _isWindowActive = false;
+                _lastActivatedByClickTick = 0;
+                _ignoreNextPlayPauseClick = false;
                 if (popupOsd != null && popupOsd.IsOpen)
                 {
                     popupOsd.IsOpen = false;
@@ -1222,6 +1265,14 @@ namespace AnniPlayer
             };
             this.Activated += (s, e) =>
             {
+                if (!_isWindowActive)
+                {
+                    _lastActivatedByClickTick = Environment.TickCount64;
+                    if (SettingsService.Instance.Config.ClickToActivateOnly)
+                    {
+                        _ignoreNextPlayPauseClick = true;
+                    }
+                }
                 _isWindowActive = true;
                 if (_isNetworkBuffering && !string.IsNullOrEmpty(_cachedBufferingText))
                 {
@@ -2035,9 +2086,25 @@ namespace AnniPlayer
                     MpvSetPropertyString("panscan", "0.0");
                     MpvSetPropertyString("loop-playlist", "no");
                     MpvSetPropertyString("loop-file", "no");
-                    MpvSetPropertyString("aid", "auto");
-                    MpvSetPropertyString("speed", "1.0");
-                    MpvSetPropertyString("mute", _isMuted ? "yes" : "no");
+                    MpvSetPropertyString("speed", _currentSpeed.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                    if (_currentSpeed < 1.0)
+                    {
+                        MpvSetPropertyString("video-sync", "display-resample");
+                        MpvSetPropertyString("interpolation", "yes");
+                        MpvSetPropertyString("tscale", "oversample");
+                    }
+                    else
+                    {
+                        MpvSetPropertyString("video-sync", "audio");
+                        MpvSetPropertyString("interpolation", "no");
+                    }
+                    Dispatcher.Invoke(() =>
+                    {
+                        string speedStr = $"{_currentSpeed:0.##}x";
+                        if (btnSpeed != null) btnSpeed.Content = speedStr;
+                        if (btnSpeedFS != null) btnSpeedFS.Content = speedStr;
+                        UpdateSpeedMenuChecks();
+                    });
                     _hasAutoSelectedAudioLanguage = false;
                     _recentBufferStalls.Clear();
                     _lastQualityAutoDowngradeTime = DateTime.MinValue;
@@ -2204,17 +2271,25 @@ namespace AnniPlayer
                     Dispatcher.Invoke(() => { if (_isDrawerOpen) ScrollPlaylistToCurrentItem(); });
 
                     // Reset crop state for the new file
+                    _autoCropDetectPollTimer?.Stop();
+                    _isAutoCropDetecting = false;
+                    _autoCropPollCount = 0;
+                    _hasValidDetectedCrop = false;
+                    _detectedRawCropW = 0;
+                    _detectedRawCropH = 0;
+                    _detectedRawCropX = 0;
+                    _detectedRawCropY = 0;
+                    _cachedCropFilePath = "";
+                    _cropDetectionDoneForCurrentFile = false;
+                    _cachedSmartFillNativeCrop = "";
                     MpvNative.mpv_command_string(_mpv, "set user-data/crop-ready false");
                     MpvNative.mpv_command_string(_mpv, "set user-data/crop-w 0");
                     MpvNative.mpv_command_string(_mpv, "set user-data/crop-h 0");
                     MpvNative.mpv_command_string(_mpv, "set user-data/crop-x 0");
                     MpvNative.mpv_command_string(_mpv, "set user-data/crop-y 0");
-
-                    // Trigger autocrop only for videos (skip for images)
-                    if (!_isCurrentImage && _autoCropMode != "none")
-                    {
-                        MpvNative.mpv_command_string(_mpv, $"script-message anni-autocrop-start {_autoCropMode}");
-                    }
+                    MpvNative.mpv_command_string(_mpv, "set user-data/anni-crop-rect \"\"");
+                    MpvNative.mpv_command_string(_mpv, "set user-data/anni-crop-raw \"\"");
+                    MpvNative.mpv_command_string(_mpv, "set user-data/anni-autocrop-status \"idle\"");
 
                     string name = Path.GetFileName(path);
                     string displayName = name;
@@ -2352,6 +2427,26 @@ namespace AnniPlayer
                 {
                     _lastVideoPanelSize = _videoPanel.ClientSize;
                     UpdateSmartFill();
+                }
+
+                // Periodic fallback check for async autocrop status if still pending
+                if (_autoCropMode != "none" && _isAutoCropDetecting && !_hasValidDetectedCrop && !_cropDetectionDoneForCurrentFile)
+                {
+                    string status = MpvGet("user-data/anni-autocrop-status");
+                    if (status == "applied")
+                    {
+                        _cropDetectionDoneForCurrentFile = true;
+                        _isAutoCropDetecting = false;
+                        _autoCropDetectPollTimer?.Stop();
+                        PollAutoCropData();
+                        UpdateSmartFill();
+                    }
+                    else if (status == "none" || status == "rejected" || status == "failed" || status == "unavailable")
+                    {
+                        _cropDetectionDoneForCurrentFile = true;
+                        _isAutoCropDetecting = false;
+                        _autoCropDetectPollTimer?.Stop();
+                    }
                 }
             }
 
@@ -3296,11 +3391,17 @@ namespace AnniPlayer
 
         private void BtnAutoCrop_Click(object? sender, RoutedEventArgs e)
         {
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+            {
+                RedetectAutoCrop();
+                return;
+            }
+
             if (_autoCropMode == "none") _autoCropMode = "preserve";
             else if (_autoCropMode == "preserve") _autoCropMode = "crop";
             else _autoCropMode = "none";
 
-            OnAutoCropModeChanged();
+            OnAutoCropModeChanged(userTriggered: true);
         }
 
         // ── Screenshot ───────────────────────────────────────────────────
@@ -3454,22 +3555,51 @@ namespace AnniPlayer
             string loopA = MpvGet("ab-loop-a");
             string loopB = MpvGet("ab-loop-b");
 
-            if (loopA == "no" || string.IsNullOrEmpty(loopA))
+            double posA = -1;
+            double posB = -1;
+            bool hasA = !string.IsNullOrEmpty(loopA) && loopA != "no" &&
+                        double.TryParse(loopA, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out posA) &&
+                        posA >= 0;
+            bool hasB = !string.IsNullOrEmpty(loopB) && loopB != "no" &&
+                        double.TryParse(loopB, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out posB) &&
+                        posB >= 0;
+
+            if (!hasA)
             {
-                MpvNative.mpv_command_string(_mpv, "ab-loop");
+                // First click: Record point A
                 double pos = MpvGetDouble("time-pos");
+                MpvSetPropertyString("ab-loop-a", pos.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture));
+                MpvSetPropertyString("ab-loop-b", "no");
+                _abLoopA = pos;
+                _abLoopB = -1;
                 ShowOsd(string.Format(I18nService.Instance["OsdAbLoopA"], Fmt(pos)));
             }
-            else if (loopB == "no" || string.IsNullOrEmpty(loopB))
+            else if (!hasB)
             {
-                MpvNative.mpv_command_string(_mpv, "ab-loop");
-                double posA = MpvGetDouble("ab-loop-a");
-                double posB = MpvGetDouble("time-pos");
-                ShowOsd(string.Format(I18nService.Instance["OsdAbLoopAB"], Fmt(posA), Fmt(posB)));
+                // Second click: Record second point and establish [A, B] interval (auto-ordering if set before A)
+                double curPos = MpvGetDouble("time-pos");
+                double start = Math.Min(posA, curPos);
+                double end = Math.Max(posA, curPos);
+
+                // Prevent degenerate 0-second loop
+                if (Math.Abs(end - start) < 0.2)
+                {
+                    end = start + 0.5;
+                }
+
+                MpvSetPropertyString("ab-loop-a", start.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture));
+                MpvSetPropertyString("ab-loop-b", end.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture));
+                _abLoopA = start;
+                _abLoopB = end;
+                ShowOsd(string.Format(I18nService.Instance["OsdAbLoopAB"], Fmt(start), Fmt(end)));
             }
             else
             {
-                MpvNative.mpv_command_string(_mpv, "ab-loop");
+                // Third click: Clear A-B Loop
+                MpvSetPropertyString("ab-loop-a", "no");
+                MpvSetPropertyString("ab-loop-b", "no");
+                _abLoopA = -1;
+                _abLoopB = -1;
                 ShowOsd(I18nService.Instance["OsdAbLoopClear"]);
             }
             UpdateAbMarkers();
@@ -3494,7 +3624,12 @@ namespace AnniPlayer
                 return;
             }
 
-            if (endSec <= startSec)
+            if (startSec > endSec)
+            {
+                (startSec, endSec) = (endSec, startSec);
+            }
+
+            if (Math.Abs(endSec - startSec) < 0.1)
             {
                 ShowOsd(I18nService.Instance.CurrentLanguage == "en-US" ? "Invalid A-B loop range!" : "A-B 循环时间区间无效！");
                 return;
@@ -3709,6 +3844,7 @@ namespace AnniPlayer
             string speedStr = $"{_currentSpeed:0.##}x";
             if (btnSpeed != null) btnSpeed.Content = speedStr;
             if (btnSpeedFS != null) btnSpeedFS.Content = speedStr;
+            UpdateSpeedMenuChecks();
             ShowOsd(string.Format(I18nService.Instance["OsdSpeed"], _currentSpeed.ToString("0.##")));
         }
 
@@ -3724,6 +3860,42 @@ namespace AnniPlayer
             if (sender is System.Windows.Controls.MenuItem item && double.TryParse(item.Tag?.ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double speed))
             {
                 SetPlaybackSpeed(speed);
+            }
+        }
+
+        private void SpeedContextMenu_Opened(object sender, RoutedEventArgs e)
+        {
+            UpdateSpeedMenuChecks();
+        }
+
+        private void UpdateSpeedMenuChecks()
+        {
+            if (this.Resources["VideoContextMenu"] is System.Windows.Controls.ContextMenu menu)
+            {
+                foreach (var item in menu.Items)
+                {
+                    if (item is System.Windows.Controls.MenuItem mi && mi.Name == "menuCtxSpeed")
+                    {
+                        UpdateSpeedMenuChecksInCollection(mi.Items);
+                        break;
+                    }
+                }
+            }
+            UpdateSpeedMenuChecksInCollection(btnSpeed?.ContextMenu?.Items);
+            UpdateSpeedMenuChecksInCollection(btnSpeedFS?.ContextMenu?.Items);
+        }
+
+        private void UpdateSpeedMenuChecksInCollection(System.Windows.Controls.ItemCollection? items)
+        {
+            if (items == null) return;
+            foreach (var obj in items)
+            {
+                if (obj is System.Windows.Controls.MenuItem mi &&
+                    double.TryParse(mi.Tag?.ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double tagSpeed))
+                {
+                    mi.IsCheckable = true;
+                    mi.IsChecked = Math.Abs(tagSpeed - _currentSpeed) < 0.01;
+                }
             }
         }
 
@@ -4720,8 +4892,29 @@ namespace AnniPlayer
             if (sender is System.Windows.Controls.MenuItem menuItem)
             {
                 _autoCropMode = menuItem.Tag?.ToString() ?? "none";
-                OnAutoCropModeChanged();
+                OnAutoCropModeChanged(userTriggered: true);
             }
+        }
+
+        private void AutoCropRedetect_Click(object sender, RoutedEventArgs e)
+        {
+            RedetectAutoCrop();
+        }
+
+        private void RedetectAutoCrop()
+        {
+            if (_mpv == IntPtr.Zero) return;
+            if (_isCurrentImage || PlaylistManager.IsAudioFile(_currentPlayingFilePath)) return;
+
+            if (_autoCropMode == "none")
+            {
+                _autoCropMode = "preserve";
+                UpdateAutoCropUI();
+                SaveSettingsToConfig();
+            }
+
+            ShowOsd(I18nService.Instance["OsdAutoCropDetecting"] ?? "智能去黑边: 正在分析当前画面重新运算...");
+            EnsureAutoCropDetectionRunning(forceRestart: true);
         }
 
         private void PopulateLanguageMenu(MenuItem menuLanguageSubmenu)
@@ -4816,7 +5009,7 @@ namespace AnniPlayer
             txtPlaylistCount.Text = string.Format(fmt, count);
         }
 
-        private void OnAutoCropModeChanged()
+        private void OnAutoCropModeChanged(bool userTriggered = false)
         {
             string osd = _autoCropMode switch
             {
@@ -4827,23 +5020,35 @@ namespace AnniPlayer
             ShowOsd(osd);
 
             UpdateAutoCropUI();
-            ApplyAutoCropMode();
+            ApplyAutoCropMode(forceRestart: userTriggered);
             UpdateSmartFill();
             SaveSettingsToConfig();
         }
 
-        private void ApplyAutoCropMode()
+        private void ApplyAutoCropMode(bool forceRestart = false)
         {
             if (_mpv == IntPtr.Zero) return;
             UpdateHardwareDecodingMode();
 
             if (_autoCropMode == "none")
             {
+                _autoCropDetectPollTimer?.Stop();
+                _isAutoCropDetecting = false;
+                _hasValidDetectedCrop = false;
+                _detectedRawCropW = 0;
+                _detectedRawCropH = 0;
+                _detectedRawCropX = 0;
+                _detectedRawCropY = 0;
+                _cachedCropFilePath = "";
+                _cropDetectionDoneForCurrentFile = false;
                 MpvNative.mpv_command_string(_mpv, "script-message anni-autocrop-clear");
             }
             else
             {
-                MpvNative.mpv_command_string(_mpv, $"script-message anni-autocrop-start {_autoCropMode}");
+                if (forceRestart || !_hasValidDetectedCrop)
+                {
+                    EnsureAutoCropDetectionRunning(forceRestart: true);
+                }
             }
         }
 
@@ -4958,7 +5163,7 @@ namespace AnniPlayer
             StopImageMotion();
             if (_mpv == IntPtr.Zero) return;
 
-            MpvSetPropertyString("file-local-options/video-aspect-override", "-1");
+            MpvSetPropertyString("video-aspect-override", "-1");
 
             _imageMotionMode = Random.Shared.Next(0, 4);
             _imageElapsedSec = 0.0;
@@ -5180,7 +5385,7 @@ namespace AnniPlayer
                 // 4. Crop aspect ratio, center and stretch to fill window seamlessly (panscan 1.0)
                 _lastVfString = "";
                 MpvSetPropertyString("vf", "");
-                MpvSetPropertyString("file-local-options/video-crop", "");
+                MpvSetPropertyString("video-crop", "");
                 MpvSetPropertyString("panscan", "1.0");
                 MpvSetPropertyString("keepaspect", "yes");
                 MpvSetPropertyString("video-unscaled", "no");
@@ -5496,6 +5701,175 @@ namespace AnniPlayer
             }
         }
 
+        private void PollAutoCropData()
+        {
+            if (_mpv == IntPtr.Zero) return;
+
+            // 1. Check raw detected content rect (w:h:x:y)
+            string rawCrop = MpvGet("user-data/anni-crop-raw");
+            if (!string.IsNullOrEmpty(rawCrop))
+            {
+                rawCrop = rawCrop.Trim('"');
+                var parts = rawCrop.Split(':');
+                if (parts.Length == 4 &&
+                    int.TryParse(parts[0], out int rw) &&
+                    int.TryParse(parts[1], out int rh) &&
+                    int.TryParse(parts[2], out int rx) &&
+                    int.TryParse(parts[3], out int ry))
+                {
+                    if (rw > 0 && rh > 0)
+                    {
+                        _detectedRawCropW = rw;
+                        _detectedRawCropH = rh;
+                        _detectedRawCropX = rx;
+                        _detectedRawCropY = ry;
+                        _hasValidDetectedCrop = true;
+                        _cachedCropFilePath = _currentPlayingFilePath;
+                        return;
+                    }
+                }
+            }
+
+            // 2. Fallback: check mode-computed anni-crop-rect
+            string cropRect = MpvGet("user-data/anni-crop-rect");
+            if (!string.IsNullOrEmpty(cropRect))
+            {
+                cropRect = cropRect.Trim('"');
+                var parts = cropRect.Split(':');
+                if (parts.Length == 4 &&
+                    int.TryParse(parts[0], out int cw) &&
+                    int.TryParse(parts[1], out int ch) &&
+                    int.TryParse(parts[2], out int cx) &&
+                    int.TryParse(parts[3], out int cy))
+                {
+                    if (cw > 0 && ch > 0)
+                    {
+                        if (!_hasValidDetectedCrop || _cachedCropFilePath != _currentPlayingFilePath)
+                        {
+                            _detectedRawCropW = cw;
+                            _detectedRawCropH = ch;
+                            _detectedRawCropX = cx;
+                            _detectedRawCropY = cy;
+                            _hasValidDetectedCrop = true;
+                            _cachedCropFilePath = _currentPlayingFilePath;
+                        }
+                    }
+                }
+            }
+        }
+
+        private void EnsureAutoCropDetectionRunning(bool forceRestart = false)
+        {
+            if (_mpv == IntPtr.Zero) return;
+            if (_isCurrentImage || PlaylistManager.IsAudioFile(_currentPlayingFilePath)) return;
+            if (_autoCropMode == "none") return;
+
+            if (forceRestart)
+            {
+                _cropDetectionDoneForCurrentFile = false;
+                _hasValidDetectedCrop = false;
+                _detectedRawCropW = 0;
+                _detectedRawCropH = 0;
+                _detectedRawCropX = 0;
+                _detectedRawCropY = 0;
+                _cachedCropFilePath = "";
+            }
+            else
+            {
+                if (_isAutoCropDetecting || _hasValidDetectedCrop || _cropDetectionDoneForCurrentFile) return;
+            }
+
+            _isAutoCropDetecting = true;
+            _autoCropPollCount = 0;
+            MpvNative.mpv_command_string(_mpv, $"script-message anni-autocrop-start {_autoCropMode}");
+
+            if (_autoCropDetectPollTimer == null)
+            {
+                _autoCropDetectPollTimer = new System.Windows.Threading.DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(50)
+                };
+                _autoCropDetectPollTimer.Tick += AutoCropDetectPollTimer_Tick;
+            }
+            _autoCropDetectPollTimer.Stop();
+            _autoCropDetectPollTimer.Start();
+        }
+
+        private void AutoCropDetectPollTimer_Tick(object? sender, EventArgs e)
+        {
+            _autoCropPollCount++;
+            string status = MpvGet("user-data/anni-autocrop-status");
+            if (status == "applied")
+            {
+                _autoCropDetectPollTimer?.Stop();
+                _isAutoCropDetecting = false;
+                _cropDetectionDoneForCurrentFile = true;
+                PollAutoCropData();
+                UpdateSmartFill();
+            }
+            else if (status == "none" || status == "rejected" || status == "failed" || status == "unavailable" || _autoCropPollCount > 100)
+            {
+                _autoCropDetectPollTimer?.Stop();
+                _isAutoCropDetecting = false;
+                _cropDetectionDoneForCurrentFile = true;
+            }
+        }
+
+        private bool TryComputeActiveCrop(double sourceW, double sourceH, string mode, out int cw, out int ch, out int cx, out int cy, out string alignY)
+        {
+            cw = (int)Math.Round(sourceW);
+            ch = (int)Math.Round(sourceH);
+            cx = 0;
+            cy = 0;
+            alignY = "0";
+
+            if (mode == "none" || !_hasValidDetectedCrop || sourceW <= 0 || sourceH <= 0)
+            {
+                return false;
+            }
+
+            int rawW = _detectedRawCropW;
+            int rawH = _detectedRawCropH;
+            int rawX = _detectedRawCropX;
+            int rawY = _detectedRawCropY;
+            int sw = (int)Math.Round(sourceW);
+            int sh = (int)Math.Round(sourceH);
+
+            if (rawW <= 0 || rawH <= 0 || rawW > sw || rawH > sh)
+            {
+                return false;
+            }
+
+            // Safety guard: crop must preserve at least 50% of the original video
+            if (rawW < sw * 0.5 || rawH < sh * 0.5)
+            {
+                return false;
+            }
+
+            if (mode == "preserve")
+            {
+                cx = (rawX / 2) * 2;
+                cy = (rawY / 2) * 2;
+                cw = (rawW / 2) * 2;
+                int targetH = (rawY > 0) ? (sh - rawY) : rawH;
+                ch = Math.Max(16, (targetH / 2) * 2);
+                alignY = (rawY > 0) ? "-1" : "0";
+            }
+            else // "crop"
+            {
+                cx = (rawX / 2) * 2;
+                cy = (rawY / 2) * 2;
+                cw = (rawW / 2) * 2;
+                int targetH = (rawY > 0) ? (sh - 2 * rawY) : rawH;
+                ch = Math.Max(16, (targetH / 2) * 2);
+                alignY = "0";
+            }
+
+            // Must be effective crop (smaller than source)
+            bool effective = (cx > 0 || cy > 0 || cw < sw || ch < sh);
+            return effective;
+        }
+
         private void UpdateSmartFill()
         {
             if (_isUpdatingSmartFill) return;
@@ -5514,7 +5888,7 @@ namespace AnniPlayer
                         _lastVfString = "";
                         MpvSetPropertyString("vf", "");
                     }
-                    MpvSetPropertyString("file-local-options/video-crop", "");
+                    MpvSetPropertyString("video-crop", "");
                     MpvSetPropertyString("panscan", "1.0");
                     MpvSetPropertyString("keepaspect", "yes");
                     MpvSetPropertyString("video-unscaled", "no");
@@ -5545,7 +5919,7 @@ namespace AnniPlayer
                         _lastVfString = "";
                         MpvSetPropertyString("vf", "");
                     }
-                    MpvSetPropertyString("file-local-options/video-crop", "");
+                    MpvSetPropertyString("video-crop", "");
                     return;
                 }
 
@@ -5567,13 +5941,44 @@ namespace AnniPlayer
                 bool isAudio = PlaylistManager.IsAudioFile(_currentPlayingFilePath);
                 bool effectiveSmartFill = _smartFillEnabled || isAudio;
 
-                // Short-circuit cache check: If container dimensions and video mode haven't changed, skip redundant P/Invoke and vf recomputation
+                // Sync SmartFill active state flag to MPV so autocrop.lua knows whether SmartFill is rendering
+                MpvSetPropertyString("user-data/anni-smartfill-active", effectiveSmartFill ? "yes" : "no");
+
+                // Check if autocrop.lua has newly reported crop data
+                PollAutoCropData();
+
+                // ── STAGE 1: Calculate Auto Crop ──
+                double vw = rawW;
+                double vh = rawH;
+                string cropFilter = "";
+                string nativeCrop = "";
+                string alignY = "0";
+                bool isCropped = false;
+
+                if (_autoCropMode != "none")
+                {
+                    if (TryComputeActiveCrop(rawW, rawH, _autoCropMode, out int cw, out int ch, out int cx, out int cy, out alignY))
+                    {
+                        vw = cw;
+                        vh = ch;
+                        cropFilter = $"crop={cw}:{ch}:{cx}:{cy},";
+                        nativeCrop = $"{cw}x{ch}+{cx}+{cy}";
+                        isCropped = true;
+                    }
+                    else if (!_hasValidDetectedCrop && !_cropDetectionDoneForCurrentFile)
+                    {
+                        EnsureAutoCropDetectionRunning();
+                    }
+                }
+
+                // Short-circuit cache check: If container dimensions, video modes, and crop haven't changed, skip redundant work
                 if (pw == _cachedSmartFillGridW && ph == _cachedSmartFillGridH &&
                     rawW == _cachedSmartFillRawW && rawH == _cachedSmartFillRawH &&
                     effectiveSmartFill == _cachedSmartFillEnabled &&
                     _smartFillMode == _cachedSmartFillMode &&
                     _isFullscreen == _cachedSmartFillFullscreen &&
-                    _autoCropMode == _cachedSmartFillAutoCrop)
+                    _autoCropMode == _cachedSmartFillAutoCrop &&
+                    nativeCrop == _cachedSmartFillNativeCrop)
                 {
                     return;
                 }
@@ -5586,51 +5991,53 @@ namespace AnniPlayer
                 _cachedSmartFillMode = _smartFillMode;
                 _cachedSmartFillFullscreen = _isFullscreen;
                 _cachedSmartFillAutoCrop = _autoCropMode;
+                _cachedSmartFillNativeCrop = nativeCrop;
 
-                double vw = rawW;
-                double vh = rawH;
-                string cropFilter = "";
-                string nativeCrop = "";
-
-                if (_autoCropMode != "none")
-                {
-                    string cropRect = MpvGet("user-data/anni-crop-rect");
-                    if (!string.IsNullOrEmpty(cropRect))
-                    {
-                        cropRect = cropRect.Trim('"');
-                        var parts = cropRect.Split(':');
-                        if (parts.Length == 4 && 
-                            int.TryParse(parts[0], out int cw) && 
-                            int.TryParse(parts[1], out int ch) &&
-                            int.TryParse(parts[2], out int cx) &&
-                            int.TryParse(parts[3], out int cy))
-                        {
-                            if (cw > 0 && ch > 0)
-                            {
-                                vw = cw;
-                                vh = ch;
-                                cropFilter = $"crop={cw}:{ch}:{cx}:{cy},";
-                                nativeCrop = $"{cw}x{ch}+{cx}+{cy}";
-                            }
-                        }
-                    }
-                }
-
+                // ── STAGE 2: Calculate Smart Fill ──
                 if (!effectiveSmartFill)
                 {
                     string plainTargetVf = (_autoCropMode == "none") ? _activeRtxVf : "";
-                    if (plainTargetVf != _lastVfString)
+                    bool vfChanged = (plainTargetVf != _lastVfString);
+                    if (vfChanged)
                     {
                         _lastVfString = plainTargetVf;
                         MpvSetPropertyString("vf", plainTargetVf);
                     }
-                    if (_autoCropMode != "none" && !string.IsNullOrEmpty(nativeCrop))
+
+                    // Smart Fill is OFF: Apply Stage 1's cropped rectangle natively via MPV video-crop
+                    if (isCropped && !string.IsNullOrEmpty(nativeCrop))
                     {
-                        MpvSetPropertyString("file-local-options/video-crop", nativeCrop);
+                        MpvSetPropertyString("video-crop", nativeCrop);
+                        MpvSetPropertyString("video-align-y", alignY);
+
+                        // If vf changed, mpv asynchronously re-initializes the filter graph (~10-30ms)
+                        // which resets VO properties including video-crop. Re-apply video-crop
+                        // after filter reconfig settles to permanently lock in the crop.
+                        if (vfChanged)
+                        {
+                            string capturedCrop = nativeCrop;
+                            string capturedAlign = alignY;
+                            _ = Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, new Action(async () =>
+                            {
+                                await System.Threading.Tasks.Task.Delay(50);
+                                if (!_smartFillEnabled && _autoCropMode != "none")
+                                {
+                                    MpvSetPropertyString("video-crop", capturedCrop);
+                                    MpvSetPropertyString("video-align-y", capturedAlign);
+                                }
+                                await System.Threading.Tasks.Task.Delay(100);
+                                if (!_smartFillEnabled && _autoCropMode != "none")
+                                {
+                                    MpvSetPropertyString("video-crop", capturedCrop);
+                                    MpvSetPropertyString("video-align-y", capturedAlign);
+                                }
+                            }));
+                        }
                     }
-                    else if (_autoCropMode == "none")
+                    else
                     {
-                        MpvSetPropertyString("file-local-options/video-crop", "");
+                        MpvSetPropertyString("video-crop", "");
+                        MpvSetPropertyString("video-align-y", "0");
                     }
 
                     // 🎨 动态适配视频视口：当未开启虚化填充且处于自定义皮肤模式时，在【窗口模式】下自动缩放视频容器 HWND 尺寸，让未被视频覆盖的两侧/上下空白区域直接通透呈现出皮肤专属母版大理石/曜石/蓝宝材质底图！
@@ -5681,8 +6088,9 @@ namespace AnniPlayer
                     videoHost.VerticalAlignment = System.Windows.VerticalAlignment.Stretch;
                 }
 
-                // SmartFill is enabled. Clear native video-crop to prevent double-cropping!
-                MpvSetPropertyString("file-local-options/video-crop", "");
+                // SmartFill is enabled. Clear native video-crop to prevent double-cropping (Stage 1 crop is integrated into lavfi)
+                MpvSetPropertyString("video-crop", "");
+                MpvSetPropertyString("video-align-y", "0");
 
                 double vrFill = vw / vh;
                 double pr = pw / ph;
@@ -5759,12 +6167,46 @@ namespace AnniPlayer
                     return;
                 }
 
-                // No fill needed — restore active RTX VSR or clear vf
+                // Restore active RTX VSR or clear vf
                 string targetVf = (_autoCropMode == "none") ? _activeRtxVf : "";
-                if (targetVf != _lastVfString)
+                bool noFillVfChanged = (targetVf != _lastVfString);
+                if (noFillVfChanged)
                 {
                     _lastVfString = targetVf;
                     MpvSetPropertyString("vf", targetVf);
+                }
+
+                // No fill needed — if Stage 1 is cropped, apply native video-crop now!
+                if (isCropped && !string.IsNullOrEmpty(nativeCrop))
+                {
+                    MpvSetPropertyString("video-crop", nativeCrop);
+                    MpvSetPropertyString("video-align-y", alignY);
+
+                    if (noFillVfChanged)
+                    {
+                        string capturedCrop = nativeCrop;
+                        string capturedAlign = alignY;
+                        _ = Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, new Action(async () =>
+                        {
+                            await System.Threading.Tasks.Task.Delay(50);
+                            if (!_smartFillEnabled && _autoCropMode != "none")
+                            {
+                                MpvSetPropertyString("video-crop", capturedCrop);
+                                MpvSetPropertyString("video-align-y", capturedAlign);
+                            }
+                            await System.Threading.Tasks.Task.Delay(100);
+                            if (!_smartFillEnabled && _autoCropMode != "none")
+                            {
+                                MpvSetPropertyString("video-crop", capturedCrop);
+                                MpvSetPropertyString("video-align-y", capturedAlign);
+                            }
+                        }));
+                    }
+                }
+                else
+                {
+                    MpvSetPropertyString("video-crop", "");
+                    MpvSetPropertyString("video-align-y", "0");
                 }
             }
             catch (Exception ex)
@@ -6233,6 +6675,7 @@ namespace AnniPlayer
             {
                 ApplyThemeToMenu(menu);
                 UpdateAspectRatioMenuChecks();
+                UpdateSpeedMenuChecks();
 
                 double scale = SettingsService.Instance.Config.ContextMenuScale;
                 if (scale < 0.8 || scale > 2.5) scale = 1.0;
@@ -7767,6 +8210,11 @@ namespace AnniPlayer
                 BtnSmartFill_Click(null, new RoutedEventArgs());
                 return true;
             }
+            if (currentCombo == "Shift+X")
+            {
+                RedetectAutoCrop();
+                return true;
+            }
             if (IsHotkeyMatch(currentCombo, hk.AutoCrop, hk.SecAutoCrop))
             {
                 BtnAutoCrop_Click(null, new RoutedEventArgs());
@@ -7893,12 +8341,26 @@ namespace AnniPlayer
         private async void RunSelfTestAsync()
         {
             Console.WriteLine("[INFO] Self-test started.");
+            if (string.IsNullOrWhiteSpace(_selfTestMedia) || !File.Exists(_selfTestMedia))
+            {
+                string[] candidates = {
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\Assets\test.mp4"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Assets\test.mp4"),
+                    Path.Combine(Directory.GetCurrentDirectory(), @"Assets\test.mp4"),
+                    @"E:\Winnie-history\Anni player\Assets\test.mp4"
+                };
+                foreach (var c in candidates)
+                {
+                    if (File.Exists(c)) { _selfTestMedia = Path.GetFullPath(c); break; }
+                }
+            }
             if (!File.Exists(_selfTestMedia))
             {
                 Console.WriteLine($"[ERROR] Self-test media not found: {_selfTestMedia}");
                 Environment.Exit(1); return;
             }
 
+            _autoCropMode = "preserve";
             PlayFile(_selfTestMedia);
             await System.Threading.Tasks.Task.Delay(2500);
 
@@ -10049,6 +10511,8 @@ namespace AnniPlayer
     }
     internal class DoubleBufferedPanel : System.Windows.Forms.Panel
     {
+        public event Action? MouseActivateDetected;
+
         public DoubleBufferedPanel()
         {
             SetStyle(
@@ -10058,6 +10522,16 @@ namespace AnniPlayer
                 System.Windows.Forms.ControlStyles.ResizeRedraw,
                 true);
             UpdateStyles();
+        }
+
+        protected override void WndProc(ref System.Windows.Forms.Message m)
+        {
+            const int WM_MOUSEACTIVATE = 0x0021;
+            if (m.Msg == WM_MOUSEACTIVATE)
+            {
+                MouseActivateDetected?.Invoke();
+            }
+            base.WndProc(ref m);
         }
     }
 }

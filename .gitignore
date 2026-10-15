@@ -41,6 +41,8 @@ dist/
 *.7z
 *.tar
 *.gz
+*.srt
+narrative_1min_segments/
 
 # User-specific files
 *.user

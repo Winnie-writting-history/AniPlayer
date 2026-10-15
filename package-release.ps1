@@ -24,7 +24,7 @@ $mediaExtensions = @("*.mp4", "*.mkv", "*.avi", "*.mov", "*.wmv", "*.flv", "*.we
 Write-Host ""
 Write-Host "Packaging [1/2]: Win11 Framework-Dependent (Demo\AniPlayer.zip)..." -ForegroundColor Yellow
 
-& .\build-demo.ps1
+& .\build-demo.ps1 -NoPause
 
 $demoDir = ".\Demo"
 $demoPackRoot = "$distDir\demo_pack_temp"
