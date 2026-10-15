@@ -1,13 +1,21 @@
-# 🚀 AniPlayer v1.0.0 Release Notes
+# 🚀 AniPlayer v1.0.1 Release Notes
 
 > **AniPlayer — Minimalist, Ad-Free, Modern Hardware-Accelerated Media Player for Windows**
+
+### 🛠️ What's Changed in v1.0.1
+- **Fixed minor bugs when black bar cropping and background filling work together**:
+  - **Decoupled States**: Fully separated Smart Fill (ambient blur) toggle and autocrop state machines to prevent mutual interference.
+  - **Watermark-Immune Memory Scanner**: Added raw memory screenshot scanning fallback (`screenshot-raw` via mpv) with logo tolerance filter, ensuring accurate black bar detection even with TV channel logos.
+  - **Auto-Healing VO Crop Sync**: Registered `video-reconfig` and fill state observer in `autocrop.lua` to immediately self-heal and reapply crop on any aspect ratio change.
+  - **On-Demand Recalculation**: Added hotkey `Shift+X` and right-click menu item for instant manual crop recalculation.
+  - **Deployment & Sync**: Enhanced `build-demo.ps1` with SHA-256 integrity verification against `C:\Program Files\AniPlayer\`, and added `grant-programfiles-sync.bat` for one-click permission setup.
 
 ### 📦 Downloads & Edition Selection
 
 | Asset | Size | Recommended Environment |
 | :--- | :---: | :--- |
-| **`AniPlayer-v1.0.0-Win11-FrameworkDependent.zip`** | **~49 MB** | **Recommended for Windows 11**. Ultra-lightweight edition utilizing pre-installed .NET 8 desktop runtime. |
-| **`AniPlayer-v1.0.0-Windows-x64-Self-Contained.zip`** | **~111 MB** | **Universal for Windows 10 & 11**. Bundled with complete self-contained .NET 8 runtime and Direct3D accelerators. Zero dependencies. |
+| **`AniPlayer-v1.0.1-Win11-FrameworkDependent.zip`** | **~54 MB** | **Recommended for Windows 11**. Ultra-lightweight edition utilizing pre-installed .NET 8 desktop runtime. |
+| **`AniPlayer-v1.0.1-Windows-x64-Self-Contained.zip`** | **~115 MB** | **Universal for Windows 10 & 11**. Bundled with complete self-contained .NET 8 runtime and Direct3D accelerators. Zero dependencies. |
 
 ---
 
@@ -41,8 +49,8 @@
 
 ### 🛡️ SHA-256 Checksums
 ```text
-bb7a926eec9187f49e81f1d47ebb2d65b672fa00833e7bc21f80700515d9f73b  AniPlayer-v1.0.0-Win11-FrameworkDependent.zip (Win11 Framework-Dependent)
-bf6f763db2654a2257ed6c4b4d05070547e518a2abbb0dc29f4e92007eb6a373  AniPlayer-v1.0.0-Windows-x64-Self-Contained.zip (Self-Contained Standalone)
+a8b32bb6ea3fc8855d6634acba3ba0cac4546346644171100df3d6d9aec475c7  AniPlayer-v1.0.1-Win11-FrameworkDependent.zip (Win11 Framework-Dependent)
+ab9dd53e2d0388890e01924ebc2d0591ca0ea342814492943c8a9641d7be0fa7  AniPlayer-v1.0.1-Windows-x64-Self-Contained.zip (Self-Contained Standalone)
 ```
 
 ---
