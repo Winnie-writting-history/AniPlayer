@@ -32,7 +32,7 @@
 
 <p align="center">
   <a href="https://youtu.be/Os-oLRJoQuQ">
-    <img src="https://img.youtube.com/vi/Os-oLRJoQuQ/maxresdefault.jpg" alt="AniPlayer AI Development Story & Demo on YouTube" width="85%" style="border-radius: 8px;" />
+    <img src="Assets/dev_video_cover.jpg" alt="AniPlayer AI Development Story & Demo on YouTube" width="85%" style="border-radius: 8px;" />
   </a>
 </p>
 <p align="center">
