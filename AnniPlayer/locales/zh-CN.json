@@ -262,7 +262,7 @@
     "SettingsCloseAction": "关闭窗口行为",
     "SettingsCloseToTray": "最小化到系统托盘",
     "SettingsCloseExit": "直接退出程序",
-    "SettingsAutoResume": "启动时自动恢复上次播放进度",
+    "SettingsAutoResume": "记忆并自动恢复播放进度 (独立保留最近10个媒体)",
     "SettingsAlwaysOnTop": "播放时窗口始终置顶",
     "SettingsRightEdgeHoverPlaylist": "鼠标靠近窗口右侧边缘时自动展开播放列表",
     "SettingsDoubleEscToExit": "双击 Esc 键退出程序",

@@ -262,7 +262,7 @@
     "SettingsCloseAction": "Close Window Action",
     "SettingsCloseToTray": "Minimize to System Tray",
     "SettingsCloseExit": "Exit Application Directly",
-    "SettingsAutoResume": "Auto Resume Playback Position on Launch",
+    "SettingsAutoResume": "Auto-resume playback position (Remembers last 10 media)",
     "SettingsAlwaysOnTop": "Keep Window Always on Top While Playing",
     "SettingsRightEdgeHoverPlaylist": "Auto-expand playlist when mouse hovers near right edge",
     "SettingsDoubleEscToExit": "Double-press Esc to Exit Application",

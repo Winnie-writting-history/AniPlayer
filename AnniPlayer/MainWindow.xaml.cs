@@ -94,6 +94,7 @@ namespace AnniPlayer
         private int _imageMotionMode = 0;
         private double _imageElapsedSec = 0.0;
         private double _pendingResumePosition = 0.0;
+        private int _periodicProgressSaveCount = 0;
         private bool _isDraggingSize = false;
         private bool _currentMediaHasVideoTrack = false;
         
@@ -2068,6 +2069,22 @@ namespace AnniPlayer
 
                 try
                 {
+                    // Checkpoint progress of previous media before switching to the new one
+                    if (!string.IsNullOrEmpty(_currentPlayingFilePath) && !_isCurrentImage && _hasMedia && _currentMediaLoadedSuccessfully && _mpv != IntPtr.Zero)
+                    {
+                        double oldPos = MpvGetDouble("time-pos");
+                        double oldDur = MpvGetDouble("duration");
+                        string oldEof = MpvGet("eof-reached");
+                        if (oldPos > 3.0 && oldDur > 6.0 && oldPos < oldDur - 5.0 && oldEof != "yes")
+                        {
+                            SettingsService.Instance.UpdatePlaybackProgress(_currentPlayingFilePath, oldPos, oldDur);
+                        }
+                        else if (oldEof == "yes" || (oldDur > 6.0 && oldPos >= oldDur - 5.0))
+                        {
+                            SettingsService.Instance.ClearPlaybackProgress(_currentPlayingFilePath);
+                        }
+                    }
+
                     StopSkinIdleVideo();
                     _hasMedia = true;
                     _currentPlayingFilePath = path;
@@ -2195,16 +2212,15 @@ namespace AnniPlayer
 
                     double resumePos = 0.0;
                     var cfg = SettingsService.Instance.Config;
-                    if (cfg.AutoResume && !_isCurrentImage && !string.IsNullOrEmpty(cfg.LastPlayedFilePath))
+                    if (cfg.AutoResume && !_isCurrentImage)
                     {
                         try
                         {
-                            string curFull = Path.GetFullPath(path);
-                            string lastFull = Path.GetFullPath(cfg.LastPlayedFilePath);
-                            if (string.Equals(curFull, lastFull, StringComparison.OrdinalIgnoreCase))
+                            double savedPos = SettingsService.Instance.GetPlaybackProgress(path);
+                            if (savedPos > 1.0)
                             {
                                 // Rewind 3 seconds from last playback position for context, min 0
-                                resumePos = Math.Max(0.0, cfg.LastPlayedPosition - 3.0);
+                                resumePos = Math.Max(0.0, savedPos - 3.0);
                             }
                         }
                         catch { }
@@ -2753,6 +2769,7 @@ namespace AnniPlayer
                     string eof = MpvGet("eof-reached");
                     if (eof == "yes")
                     {
+                        SettingsService.Instance.ClearPlaybackProgress(_currentPlayingFilePath);
                         var next = PlaylistManager.Instance.GetNext();
                         if (next != null)
                         {
@@ -2771,6 +2788,17 @@ namespace AnniPlayer
                         else if (!paused)
                         {
                             MpvNative.mpv_command_string(_mpv, "set pause yes");
+                        }
+                    }
+                    else if (!paused)
+                    {
+                        if (++_periodicProgressSaveCount >= 25) // ~5 seconds (25 * 200ms)
+                        {
+                            _periodicProgressSaveCount = 0;
+                            if (pos > 3.0 && dur > 6.0 && pos < dur - 5.0)
+                            {
+                                SettingsService.Instance.UpdatePlaybackProgress(_currentPlayingFilePath, pos, dur);
+                            }
                         }
                     }
                 }
@@ -3292,6 +3320,22 @@ namespace AnniPlayer
             {
                 bool isPaused = MpvGet("pause") == "yes";
                 MpvNative.mpv_set_property_string(_mpvBgm, "pause", isPaused ? "yes" : "no");
+            }
+
+            if (!_isCurrentImage && _hasMedia && !string.IsNullOrEmpty(_currentPlayingFilePath) && _currentMediaLoadedSuccessfully && _mpv != IntPtr.Zero)
+            {
+                bool isPaused = MpvGet("pause") == "yes";
+                if (isPaused)
+                {
+                    double pPos = MpvGetDouble("time-pos");
+                    double pDur = MpvGetDouble("duration");
+                    string pEof = MpvGet("eof-reached");
+                    if (pPos > 3.0 && pDur > 6.0 && pPos < pDur - 5.0 && pEof != "yes")
+                    {
+                        SettingsService.Instance.UpdatePlaybackProgress(_currentPlayingFilePath, pPos, pDur);
+                        SettingsService.Instance.Save();
+                    }
+                }
             }
         }
 
@@ -10470,26 +10514,20 @@ namespace AnniPlayer
                     // If video played past 3 seconds and is not within the last 5 seconds / not EOF, record it
                     if (pos > 3.0 && dur > 6.0 && pos < dur - 5.0 && eof != "yes")
                     {
-                        SettingsService.Instance.Config.LastPlayedFilePath = _currentPlayingFilePath;
-                        SettingsService.Instance.Config.LastPlayedPosition = pos;
-                        SettingsService.Instance.Config.LastPlayedDuration = dur;
+                        SettingsService.Instance.UpdatePlaybackProgress(_currentPlayingFilePath, pos, dur);
                     }
                     else
                     {
                         // Finished playing or just started: clear so it doesn't resume from the very end
-                        SettingsService.Instance.Config.LastPlayedFilePath = "";
-                        SettingsService.Instance.Config.LastPlayedPosition = 0.0;
-                        SettingsService.Instance.Config.LastPlayedDuration = 0.0;
+                        SettingsService.Instance.ClearPlaybackProgress(_currentPlayingFilePath);
                     }
                 }
 
                 // 3. Clear current playlist on exit if option is enabled (saved library playlists in library.json are untouched)
+                // DECOUPLED: Clearing playlist only affects the playlist items, playback progress history is kept independently!
                 if (SettingsService.Instance.Config.ClearPlaylistOnExit)
                 {
                     PlaylistManager.Instance.Clear();
-                    SettingsService.Instance.Config.LastPlayedFilePath = "";
-                    SettingsService.Instance.Config.LastPlayedPosition = 0.0;
-                    SettingsService.Instance.Config.LastPlayedDuration = 0.0;
                 }
 
                 SettingsService.Instance.Save();
