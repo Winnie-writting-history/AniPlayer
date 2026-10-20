@@ -14,7 +14,7 @@
 [![Engine](https://img.shields.io/badge/Core-libmpv%20%2B%20Direct3D11-red.svg?style=flat-square)](https://mpv.io/)
 [![License](https://img.shields.io/badge/License-GPLv3-green.svg?style=flat-square)](./LICENSE)
 
-🏠 **[Official Website](https://aniplayer.ai.studio/)** • 📦 **[Downloads](../../releases)** • 💖 **[Donate](https://aniplayer.ai.studio/)**
+🏠 **[Official Website](https://aniplayer.ai.studio/)** • 🎬 **[Watch Dev Video](https://youtu.be/Os-oLRJoQuQ)** • 📦 **[Downloads](../../releases)** • 💖 **[Donate](https://aniplayer.ai.studio/)**
 
 </div>
 
@@ -23,9 +23,22 @@
 > 💭 *Hi, this is my first project published on GitHub.*  
 > *I really don't know how things work here -_-. Luckily I have my AI agent to help and guide me.*  
 > *I hope you enjoy this media player. It surely took me a lot of time to build!*  
-> *I don't have a job and I don't want one anyway. Right now, I'm lying flat in home. *  
-> *I have absolutely no idea how to write or build a program like this. The code is completely written by Antigravity. I recorded some of the development process, which I will edit into a video, and post it on YouTube later.*  
+> *I don't have a job and I don't want one anyway. Right now, I'm lying flat at home.*  
+> *I have absolutely no idea how to write or build a program like this. The code is completely written by Antigravity. I recorded the development process screen capture and shared it on YouTube — feel free to check it out below!*  
 > *Only thoroughly tested on Windows 11, though it should be fully compatible with Windows 10 as well.*  
+---
+
+## 📺 AI Development Process & Video Demo
+
+<p align="center">
+  <a href="https://youtu.be/Os-oLRJoQuQ">
+    <img src="https://img.youtube.com/vi/Os-oLRJoQuQ/maxresdefault.jpg" alt="AniPlayer AI Development Story & Demo on YouTube" width="85%" style="border-radius: 8px;" />
+  </a>
+</p>
+<p align="center">
+  ▶️ <strong><a href="https://youtu.be/Os-oLRJoQuQ">Watch the Complete Development Process & AI Pair Programming on YouTube (Click to Play)</a></strong>
+</p>
+
 ---
 
 ## 📸 Interface & Themes Showcase
