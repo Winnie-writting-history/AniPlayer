@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.IO.Pipes;
 using System.Runtime.InteropServices;
@@ -94,6 +94,8 @@ namespace AnniPlayer
         private int _imageMotionMode = 0;
         private double _imageElapsedSec = 0.0;
         private double _pendingResumePosition = 0.0;
+        private int _resumeSeekAttempts = 0;
+        private long _lastResumeSeekTick = 0;
         private int _periodicProgressSaveCount = 0;
         private bool _isDraggingSize = false;
         private bool _currentMediaHasVideoTrack = false;
@@ -2070,7 +2072,7 @@ namespace AnniPlayer
                 try
                 {
                     // Checkpoint progress of previous media before switching to the new one
-                    if (!string.IsNullOrEmpty(_currentPlayingFilePath) && !_isCurrentImage && _hasMedia && _currentMediaLoadedSuccessfully && _mpv != IntPtr.Zero)
+                    if (!string.IsNullOrEmpty(_currentPlayingFilePath) && !_isCurrentImage && _hasMedia && _currentMediaLoadedSuccessfully && _mpv != IntPtr.Zero && IsMpvOnCurrentFile() && _pendingResumePosition <= 0.0)
                     {
                         double oldPos = MpvGetDouble("time-pos");
                         double oldDur = MpvGetDouble("duration");
@@ -2229,8 +2231,23 @@ namespace AnniPlayer
                     if (resumePos > 1.0)
                     {
                         _pendingResumePosition = resumePos;
+                        _resumeSeekAttempts = 0;
+                        _lastResumeSeekTick = 0;
+                        string startOpt = resumePos.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+                        MpvNative.mpv_command_string(_mpv, $"loadfile \"{posixPath}\" replace -1 start={startOpt}");
+                        ShowOsd(string.Format(I18nService.Instance["OsdResumePlayback"], Fmt(resumePos)));
+                    }
+                    else
+                    {
+                        _pendingResumePosition = 0.0;
                         MpvNative.mpv_command_string(_mpv, $"loadfile \"{posixPath}\" replace");
-                        ShowOsd(string.Format(I18nService.Instance["OsdResumePlayback"], TimeSpan.FromSeconds(resumePos).ToString(@"mm\:ss")));
+                    }
+                    bool bypassLegacyResume = true;
+                    if (!bypassLegacyResume) if (resumePos > 1.0)
+                    {
+                        _pendingResumePosition = resumePos;
+                        MpvNative.mpv_command_string(_mpv, $"loadfile \"{posixPath}\" replace");
+                        ShowOsd(string.Format(I18nService.Instance["OsdResumePlayback"], Fmt(resumePos)));
                     }
                     else
                     {
@@ -2318,7 +2335,11 @@ namespace AnniPlayer
                     while (timeout < 15)
                     {
                         await System.Threading.Tasks.Task.Delay(100);
-                        if (MpvGetDouble("width") > 0 || MpvGetDouble("duration") > 0)
+                        string curPath = MpvGet("path");
+                        bool isTargetMpvFile = !string.IsNullOrEmpty(curPath) &&
+                            (string.Equals(curPath, posixPath, StringComparison.OrdinalIgnoreCase) ||
+                             string.Equals(curPath.Replace("/", "\\"), path, StringComparison.OrdinalIgnoreCase));
+                        if (!_loadQueue.IsEmpty || _videoSizeSet || (isTargetMpvFile && (MpvGetDouble("width") > 0 || MpvGetDouble("duration") > 0)))
                         {
                             break;
                         }
@@ -2425,15 +2446,51 @@ namespace AnniPlayer
                 return;
             }
 
-            if (_pendingResumePosition > 0.0 && _hasMedia && _mpv != IntPtr.Zero)
+            string curActiveMpvPath = MpvGet("path");
+            string posixActiveTarget = (_currentPlayingFilePath ?? "").Replace("\\", "/");
+            bool isResumeTargetActive = !string.IsNullOrEmpty(posixActiveTarget) &&
+                (string.Equals(curActiveMpvPath, posixActiveTarget, StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(curActiveMpvPath?.Replace("/", "\\"), _currentPlayingFilePath, StringComparison.OrdinalIgnoreCase));
+
+            if (_pendingResumePosition > 0.0 && _hasMedia && _mpv != IntPtr.Zero && isResumeTargetActive)
             {
                 double dur = MpvGetDouble("duration");
                 double pos = MpvGetDouble("time-pos");
-                if (dur > 0 || pos >= 0)
+                if (dur > 0 && !string.IsNullOrEmpty(MpvGet("time-pos")))
+                {
+                    double target = _pendingResumePosition;
+                    bool resumeDone = (pos >= target - 5.0 && pos <= target + 120.0) || target >= dur - 5.0 || _resumeSeekAttempts >= 6;
+                    if (!resumeDone)
+                    {
+                        long nowMs = Environment.TickCount64;
+                        if (nowMs - _lastResumeSeekTick >= 700)
+                        {
+                            _lastResumeSeekTick = nowMs;
+                            _resumeSeekAttempts++;
+                            MpvNative.mpv_command_string(_mpv, $"seek {target.ToString(System.Globalization.CultureInfo.InvariantCulture)} absolute exact");
+                        }
+                        return;
+                    }
+                    _pendingResumePosition = 0.0;
+                    _cropDetectionDoneForCurrentFile = false;
+                    _hasValidDetectedCrop = false;
+                    if (_videoSizeSet && _autoCropMode != "none" && !_isCurrentImage && !PlaylistManager.IsAudioFile(_currentPlayingFilePath))
+                    {
+                        EnsureAutoCropDetectionRunning(forceRestart: true);
+                    }
+                }
+                bool bypassLegacySeek = true;
+                if (!bypassLegacySeek) if (dur > 0 || pos >= 0)
                 {
                     double target = _pendingResumePosition;
                     _pendingResumePosition = 0.0;
                     MpvNative.mpv_command_string(_mpv, $"seek {target.ToString(System.Globalization.CultureInfo.InvariantCulture)} absolute exact");
+                    _cropDetectionDoneForCurrentFile = false;
+                    _hasValidDetectedCrop = false;
+                    if (_videoSizeSet && _autoCropMode != "none" && !_isCurrentImage && !PlaylistManager.IsAudioFile(_currentPlayingFilePath))
+                    {
+                        EnsureAutoCropDetectionRunning(forceRestart: true);
+                    }
                 }
             }
             
@@ -2475,7 +2532,8 @@ namespace AnniPlayer
                                        string.Equals(currentMpvPath, posixPending, StringComparison.OrdinalIgnoreCase) ||
                                        string.Equals(currentMpvPath?.Replace("/", "\\"), _pendingMediaDimensionsPath, StringComparison.OrdinalIgnoreCase);
 
-                if (isNewFileActive && GetSourceVideoDimensions(out double vw, out double vh))
+                bool isAudio = PlaylistManager.IsAudioFile(_currentPlayingFilePath);
+                if (isNewFileActive && (GetSourceVideoDimensions(out double vw, out double vh) || (isAudio && MpvGetDouble("duration") > 0)))
                 {
                     _videoSizeSet = true;
                     _currentMediaHasVideoTrack = (vw > 0 && vh > 0);
@@ -2795,7 +2853,7 @@ namespace AnniPlayer
                         if (++_periodicProgressSaveCount >= 25) // ~5 seconds (25 * 200ms)
                         {
                             _periodicProgressSaveCount = 0;
-                            if (pos > 3.0 && dur > 6.0 && pos < dur - 5.0)
+                            if (_pendingResumePosition <= 0.0 && isResumeTargetActive && pos > 3.0 && dur > 6.0 && pos < dur - 5.0)
                             {
                                 SettingsService.Instance.UpdatePlaybackProgress(_currentPlayingFilePath, pos, dur);
                             }
@@ -2878,12 +2936,21 @@ namespace AnniPlayer
             catch { /* ignore during shutdown */ }
         }
 
+        private bool IsMpvOnCurrentFile()
+        {
+            if (_mpv == IntPtr.Zero || string.IsNullOrEmpty(_currentPlayingFilePath)) return false;
+            string p = MpvGet("path");
+            if (string.IsNullOrEmpty(p)) return false;
+            return string.Equals(p, _currentPlayingFilePath.Replace("\\", "/"), StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(p.Replace("/", "\\"), _currentPlayingFilePath, StringComparison.OrdinalIgnoreCase);
+        }
+
         private static string Fmt(double s)
         {
             if (s <= 0 || double.IsNaN(s) || double.IsInfinity(s)) return "--:--";
             var t = TimeSpan.FromSeconds(s);
             return t.TotalHours >= 1
-                ? $"{(int)t.TotalHours}:{t.Minutes:D2}:{t.Seconds:D2}"
+                ? $"{(int)t.TotalHours:D2}:{t.Minutes:D2}:{t.Seconds:D2}"
                 : $"{t.Minutes:D2}:{t.Seconds:D2}";
         }
 
@@ -5904,7 +5971,7 @@ namespace AnniPlayer
                 cx = (rawX / 2) * 2;
                 cy = (rawY / 2) * 2;
                 cw = (rawW / 2) * 2;
-                int targetH = (rawY > 0) ? (sh - 2 * rawY) : rawH;
+                int targetH = rawH;
                 ch = Math.Max(16, (targetH / 2) * 2);
                 alignY = "0";
             }
@@ -10505,7 +10572,7 @@ namespace AnniPlayer
                 }
 
                 // 2. Save playback progress of the last played video if applicable
-                if (_mpv != IntPtr.Zero && _hasMedia && !string.IsNullOrEmpty(_currentPlayingFilePath) && !_isCurrentImage)
+                if (_mpv != IntPtr.Zero && _hasMedia && !string.IsNullOrEmpty(_currentPlayingFilePath) && !_isCurrentImage && IsMpvOnCurrentFile() && _pendingResumePosition <= 0.0)
                 {
                     double pos = MpvGetDouble("time-pos");
                     double dur = MpvGetDouble("duration");
@@ -10518,7 +10585,8 @@ namespace AnniPlayer
                     }
                     else
                     {
-                        // Finished playing or just started: clear so it doesn't resume from the very end
+                        // Finished playing: clear so it doesn't resume from the very end
+                        if (eof == "yes" || (dur > 6.0 && pos >= dur - 5.0))
                         SettingsService.Instance.ClearPlaybackProgress(_currentPlayingFilePath);
                     }
                 }
