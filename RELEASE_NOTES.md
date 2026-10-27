@@ -5,9 +5,13 @@
 ### 🛠️ What's Changed in v1.0.1
 - **Fixed minor bugs when black bar cropping and background filling work together**:
   - **Decoupled States**: Fully separated Smart Fill (ambient blur) toggle and autocrop state machines to prevent mutual interference.
+  - **Narrow-Edge Detection**: Added independent single-edge detection for thin bars (2–24px), preserving strict symmetric rules for larger bars.
   - **Watermark-Immune Memory Scanner**: Added raw memory screenshot scanning fallback (`screenshot-raw` via mpv) with logo tolerance filter, ensuring accurate black bar detection even with TV channel logos.
   - **Auto-Healing VO Crop Sync**: Registered `video-reconfig` and fill state observer in `autocrop.lua` to immediately self-heal and reapply crop on any aspect ratio change.
   - **On-Demand Recalculation**: Added hotkey `Shift+X` and right-click menu item for instant manual crop recalculation.
+- **Playback & Usability Enhancements**:
+  - **Resume-On-Load (断点续播) Reliability**: Optimized seek sequencing on large movie files using mpv native `start=` parameter and self-verifying retry logic to ensure robust resume across video switches.
+  - **OSD Formatting Fix**: Fixed OSD bubble truncating hours (`01:07:58` instead of `07:58`).
   - **Deployment & Sync**: Enhanced `build-demo.ps1` with SHA-256 integrity verification against `C:\Program Files\AniPlayer\`, and added `grant-programfiles-sync.bat` for one-click permission setup.
 
 ### 📦 Downloads & Edition Selection
@@ -49,8 +53,8 @@
 
 ### 🛡️ SHA-256 Checksums
 ```text
-a8b32bb6ea3fc8855d6634acba3ba0cac4546346644171100df3d6d9aec475c7  AniPlayer-v1.0.1-Win11-FrameworkDependent.zip (Win11 Framework-Dependent)
-ab9dd53e2d0388890e01924ebc2d0591ca0ea342814492943c8a9641d7be0fa7  AniPlayer-v1.0.1-Windows-x64-Self-Contained.zip (Self-Contained Standalone)
+d8f2e32321fcd2141eede5048c99159b11e8b7b46843d37ef029d7be0af8a806  AniPlayer-v1.0.1-Win11-FrameworkDependent.zip (Win11 Framework-Dependent)
+869319cff5d7bf2dd0b8df1649f4c01c698c3c46472d79794ce40e4b1c205d8e  AniPlayer-v1.0.1-Windows-x64-Self-Contained.zip (Self-Contained Standalone)
 ```
 
 ---
